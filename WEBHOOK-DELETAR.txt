@@ -1,0 +1,222 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║         🗑️ WEBHOOK DE DELEÇÃO IMPLEMENTADO!                      ║
+║                                                                  ║
+║          Apaga card do Trello ao deletar ticket                  ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+
+🔔 WEBHOOK DE DELEÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  URL: https://n8n-cbnet.automabo.com.br/webhook/apagartrello
+
+  Método: POST
+  Content-Type: application/json
+
+  Payload:
+  {
+    "ticket_numero": 42
+  }
+
+
+🔄 FLUXO COMPLETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Cliente clica "Deletar" no ticket
+     ↓
+  2. Confirma a exclusão
+     ↓
+  3. Sistema busca número do ticket ANTES de deletar
+     ↓
+  4. Deleta ticket do banco de dados
+     ↓
+  5. Envia webhook para n8n: { "ticket_numero": 42 }
+     ↓
+  6. n8n recebe e apaga card do Trello
+     ↓
+  7. Dashboard atualiza em tempo real
+
+
+📤 O QUE É ENVIADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  APENAS O NÚMERO DO TICKET:
+
+  JSON:
+  {
+    "ticket_numero": 42
+  }
+
+  Simples e direto! ✨
+
+  Por quê só o número?
+  • É único (identifica o ticket)
+  • Suficiente para buscar no Trello
+  • Leve e rápido
+  • Fácil de processar no n8n
+
+
+📊 LOGS NO CONSOLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Ao deletar um ticket, você verá:
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🗑️ ENVIANDO WEBHOOK DE DELEÇÃO
+  URL: https://n8n-cbnet.automabo.com.br/webhook/apagartrello
+  Número do Ticket: #0042
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✅ WEBHOOK DE DELEÇÃO ENVIADO COM SUCESSO!
+  Resposta do servidor: OK
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+🔧 INTEGRAÇÃO n8n
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Workflow sugerido no n8n:
+
+  1. Webhook Trigger (recebe POST)
+     ↓
+  2. Extrair ticket_numero:
+     const numero = $json.ticket_numero
+     ↓
+  3. Buscar card no Trello:
+     WHERE name CONTAINS "#0042"
+     ↓
+  4. Deletar card do Trello
+     ↓
+  5. Retornar sucesso
+
+
+  Acessar dados no n8n:
+  {{ $json.ticket_numero }}
+
+
+🧪 COMO TESTAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. npm run dev
+  2. Console aberto (F12)
+  3. Login: CBNET / Suporteautomabo
+  4. Criar um ticket de teste
+  5. Ticket criado (ex: #0042)
+  6. Clicar no ticket (modal abre)
+  7. Role até o fim
+  8. Clicar "Cancelar/Excluir Chamado"
+  9. Confirmar exclusão
+
+  NO CONSOLE, VOCÊ VERÁ:
+
+  🗑️ Iniciando deleção do ticket...
+  [ticketService] Deletando ticket ID: abc-123
+  [ticketService] Número do ticket a deletar: 42
+  [ticketService] ✅ Ticket deletado com sucesso do banco!
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🗑️ ENVIANDO WEBHOOK DE DELEÇÃO
+  URL: https://n8n-cbnet.automabo.com.br/webhook/apagartrello
+  Número do Ticket: #0042
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✅ WEBHOOK DE DELEÇÃO ENVIADO COM SUCESSO!
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  10. Verificar no n8n se recebeu o número
+
+
+⚡ CARACTERÍSTICAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ Não bloqueante (assíncrono)
+  ✅ Logs detalhados
+  ✅ Busca número antes de deletar
+  ✅ Tratamento de erro
+  ✅ JSON simples (só ticket_numero)
+  ✅ Endpoint separado (apagartrello)
+
+
+📋 EXEMPLO DE REQUISIÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  POST https://n8n-cbnet.automabo.com.br/webhook/apagartrello
+
+  Headers:
+  Content-Type: application/json
+
+  Body:
+  {
+    "ticket_numero": 42
+  }
+
+
+🎯 DOIS WEBHOOKS AGORA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. CRIAR TICKET:
+     URL: .../webhook/Tickets
+     Envia: Tudo (dados + imagens)
+     Quando: Ao criar ticket
+
+  2. DELETAR TICKET:
+     URL: .../webhook/apagartrello
+     Envia: Só o número
+     Quando: Ao deletar ticket
+
+
+📁 ARQUIVOS MODIFICADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. lib/webhooks.ts
+     • Adicionada função enviarWebhookDeletar()
+     • URL: WEBHOOK_DELETE_URL
+     • Logs detalhados
+
+  2. lib/ticketService.ts
+     • Busca número ANTES de deletar
+     • Chama webhook após deletar
+     • Não bloqueante (catch)
+
+
+🔒 SEGURANÇA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Busca ticket antes de deletar (valida existência)
+  • Se não encontrar, não deleta nem envia webhook
+  • Webhook é assíncrono (não bloqueia usuário)
+  • Se webhook falhar, ticket já foi deletado (OK)
+  • Logs em todas as etapas
+
+
+✅ CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [x] Função enviarWebhookDeletar criada
+  [x] URL do webhook apagartrello configurada
+  [x] ticketService busca número antes de deletar
+  [x] Webhook chamado após deletar
+  [x] Não bloqueante (async/await + catch)
+  [x] Logs detalhados
+  [x] JSON simples (só numero)
+  [x] Tratamento de erro
+  [x] Sem erros de lint
+  [x] Documentação criada
+
+
+🎉 RESULTADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Webhook de deleção: ✅ Funcionando
+  Busca número: ✅ Antes de deletar
+  Envia para n8n: ✅ Só o número
+  Logs: ✅ Detalhados
+  Não bloqueia: ✅ Assíncrono
+
+  Agora ao deletar ticket, Trello é atualizado! 🎯
+
+
+Versão: 2.0.1
+Data: 09/10/2025
+Funcionalidade: Webhook ao Deletar Ticket
+
+

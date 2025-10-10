@@ -1,0 +1,303 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║           🔍 BUSCA COLAPSADA + TÍTULO OBRIGATÓRIO                ║
+║                                                                  ║
+║              Interface Ainda Mais Elegante!                      ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+
+🔍 BUSCA COLAPSADA COM ANIMAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ESTADO INICIAL (Colapsado):
+  ┌─────────────────────────────────────────────────┐
+  │ Painel  [🔍] [🔔] [Sair] [Abrir Chamado]       │
+  │           ↑                                     │
+  │        Só lupa!                                 │
+  └─────────────────────────────────────────────────┘
+
+  HOVER NA LUPA:
+  ┌─────────────────────────────────────────────────┐
+  │ Painel  [🔍 Buscar] [🔔] [Sair] [Abrir...]     │
+  │           ↑                                     │
+  │     Texto aparece!                              │
+  └─────────────────────────────────────────────────┘
+
+  CLICOU NA LUPA (Expandido):
+  ┌─────────────────────────────────────────────────┐
+  │ Painel  [Digite número...] [🔍] [🔍] [🔔]...   │
+  │              ↑              ↑                   │
+  │       Campo aparece!    Botão buscar            │
+  └─────────────────────────────────────────────────┘
+
+
+🎬 ANIMAÇÃO DA BUSCA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Ao clicar na lupa:
+
+  1. Container expande (width: auto → 16rem)
+  2. Input aparece com fade-in
+  3. AutoFocus no campo
+  4. Botão de buscar aparece (se digitou algo)
+  5. Lupa mostra "Fechar" no hover
+
+  Ao fechar:
+
+  1. Input desaparece
+  2. Container encolhe
+  3. Busca é limpa
+  4. Volta ao estado inicial
+
+
+📝 TÍTULO OBRIGATÓRIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  NOVO CAMPO no formulário de criar chamado:
+
+  ┌─────────────────────────────────────────────────┐
+  │ Título do Chamado *                             │
+  │ ┌─────────────────────────────────────────────┐ │
+  │ │ Especifique o problema em poucas palavras   │ │
+  │ │ (ex: IA não responde sobre clima)           │ │
+  │ └─────────────────────────────────────────────┘ │
+  │ Máximo 100 caracteres (0/100)                   │
+  └─────────────────────────────────────────────────┘
+
+  Características:
+  • Campo obrigatório (*) em vermelho
+  • Placeholder explicativo
+  • Contador de caracteres (0/100)
+  • Máximo 100 caracteres
+  • Validação: não pode enviar vazio
+
+
+🎨 VISUAL DO HEADER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ANTES DE EXPANDIR:
+  ┌────────────────────────────────────────────────┐
+  │ [🔍] [🔔] [Sair] [Abrir Chamado]              │
+  │   ↑                                            │
+  │  Lupa compacta                                 │
+  └────────────────────────────────────────────────┘
+
+  DEPOIS DE EXPANDIR:
+  ┌────────────────────────────────────────────────┐
+  │ [Digite...] [🔍] [🔍] [🔔] [Sair] [Abrir...]  │
+  │      ↑       ↑   ↑                             │
+  │    Input   Buscar Fechar                       │
+  └────────────────────────────────────────────────┘
+
+  Cores:
+  • Lupa: Cinza
+  • Input: Fundo escuro, border cinza
+  • Focus: Ring roxo (indigo-500)
+
+
+🎯 COMO USAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  BUSCA:
+
+  1. Clique na lupa 🔍
+  2. Campo expande automaticamente
+  3. Digite o número (ex: 42)
+  4. Pressione Enter OU clique no ícone 🔍
+  5. Ticket encontrado? Abre! ✅
+  6. Clique na lupa novamente para fechar
+
+  TÍTULO DO CHAMADO:
+
+  1. Abrir Chamado
+  2. Primeiro campo: "Título do Chamado *"
+  3. Digite resumo do problema
+  4. Contador mostra caracteres restantes
+  5. Máximo: 100 caracteres
+  6. Obrigatório (botão desabilitado se vazio)
+
+
+🧪 TESTE COMPLETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  BUSCA COLAPSADA:
+
+  1. npm run dev
+  2. Login
+  3. Dashboard carrega
+  4. Veja header: [🔍] [🔔] [Sair] [Abrir...]
+  5. Passe mouse na lupa: "Buscar" aparece
+  6. Clique na lupa: Campo expande! ✨
+  7. Digite: 1
+  8. Enter: Ticket #0001 abre
+  9. Clique lupa de novo: Fecha e limpa
+
+  TÍTULO OBRIGATÓRIO:
+
+  1. Abrir Chamado
+  2. Veja primeiro campo: "Título do Chamado *"
+  3. Veja placeholder: "Especifique o problema..."
+  4. Deixe vazio
+  5. Preencha outros campos
+  6. Botão "Abrir Chamado": DESABILITADO ❌
+  7. Digite título: "IA não responde"
+  8. Veja contador: (19/100)
+  9. Botão: HABILITADO ✅
+  10. Envie
+  11. Ticket criado com título! ✅
+
+
+🎨 ANIMAÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  LUPA (mesmo estilo do sino):
+
+  Sem hover:  [🔍]
+  Com hover:  [🔍 Buscar]  ← Texto aparece
+               ↑
+          Lupa aumenta 10%
+
+  Quando expandido:
+  • Campo desliza da direita (fade-in)
+  • Width do container: auto → 256px
+  • Transição suave (300ms)
+
+
+📊 ESTADOS DA BUSCA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Estado 1: Colapsado, sem hover
+  [🔍]  Só ícone
+
+  Estado 2: Colapsado, com hover
+  [🔍 Buscar]  Texto aparece
+
+  Estado 3: Expandido, campo vazio
+  [___________] [🔍]  Input + botão lupa
+
+  Estado 4: Expandido, digitando
+  [42_________] [🔍] [🔍]  Input + 2 botões
+                      ↑    ↑
+                   Buscar Fechar
+
+  Estado 5: Ticket encontrado
+  Banner verde: "✅ Ticket #0042 encontrado!"
+
+
+✨ BENEFÍCIOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  BUSCA COLAPSADA:
+  ✅ Header mais limpo
+  ✅ Só aparece quando precisa
+  ✅ Animação elegante
+  ✅ Economiza espaço
+
+  TÍTULO OBRIGATÓRIO:
+  ✅ Tickets mais organizados
+  ✅ Fácil identificar na lista
+  ✅ Cliente especifica problema claramente
+  ✅ Webhook recebe título específico
+  ✅ Contador visual de caracteres
+
+
+📋 EXEMPLO DE TÍTULOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  BOM:
+  ✅ "IA Ana não responde sobre clima"
+  ✅ "Interface trava ao enviar imagem"
+  ✅ "Cálculo de rota retorna erro"
+  ✅ "Login do Google não funciona"
+
+  EVITAR:
+  ❌ "Problema" (muito genérico)
+  ❌ "Ajuda" (não especifica)
+  ❌ "Urgente" (não diz o que é)
+
+
+🔄 FLUXO COMPLETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  CRIAR TICKET:
+
+  1. Abrir Chamado
+  2. Título*: "IA não responde"
+  3. IA: Ana
+  4. Urgência: Alta
+  5. O que acontece: "Quando pergunto..."
+  6. O que deveria: "Deveria responder..."
+  7. Enviar
+  8. Ticket #0042 criado!
+
+  BUSCAR TICKET:
+
+  1. Dashboard
+  2. Clique lupa 🔍
+  3. Campo expande
+  4. Digite: 42
+  5. Enter
+  6. Ticket #0042 abre com título "IA não responde"
+
+
+📁 ARQUIVOS MODIFICADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. components/icons.tsx
+     • Adicionado SearchIcon
+
+  2. components/Dashboard.tsx
+     • Busca colapsada com animação
+     • Lupa com hover animado
+     • Estado showSearch
+     • Campo expansível
+
+  3. components/NewTicketForm.tsx
+     • Campo título (primeiro campo)
+     • Required + validação
+     • Placeholder explicativo
+     • Contador de caracteres
+     • maxLength 100
+
+
+✅ CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [x] Ícone de lupa adicionado
+  [x] Busca colapsada implementada
+  [x] Animação de expansão suave
+  [x] AutoFocus quando abre
+  [x] Fecha ao buscar
+  [x] Limpa ao fechar
+  [x] Campo título adicionado
+  [x] Placeholder explicativo
+  [x] Validação obrigatória
+  [x] Contador de caracteres
+  [x] maxLength 100
+  [x] Botão desabilitado sem título
+  [x] Sem erros de lint
+
+
+🎉 RESULTADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Interface: ✅ Mais limpa e organizada
+  Busca: ✅ Elegante e animada
+  Título: ✅ Obrigatório e claro
+  UX: ✅ Profissional
+
+  Header agora tem:
+  • 🔍 Lupa (busca colapsada)
+  • 🔔 Sino (notificações - dourado se OK)
+  • 🚪 Sair
+  • ➕ Abrir Chamado
+
+  Tudo com animações suaves! ✨
+
+
+Versão: 1.6.1
+Data: 09/10/2025
+Melhorias: Busca Colapsada + Título Obrigatório
+
+
