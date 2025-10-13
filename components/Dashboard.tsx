@@ -3,6 +3,7 @@ import { Ticket, TicketStatus } from '../types';
 import { TicketList } from './TicketList';
 import { TicketDetailsModal } from './TicketDetailsModal';
 import { NotificationSettingsModal } from './NotificationSettingsModal';
+import { NotificationBadge } from './NotificationBadge';
 import { BellIcon, SearchIcon } from './icons';
 import { Empresa } from '../lib/authService';
 import { ticketService } from '../lib/ticketService';
@@ -192,11 +193,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
             }`}
             title="Configurar Notificações"
           >
-            <BellIcon className={`w-5 h-5 transition-transform duration-300 group-hover:scale-110 ${
-              empresa.notificacoes_ativas && (empresa.email_notificacao || empresa.whatsapp_notificacao)
-                ? 'drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
-                : ''
-            }`} />
+            <div className="relative">
+              <BellIcon className={`w-5 h-5 transition-transform duration-300 group-hover:scale-110 ${
+                empresa.notificacoes_ativas && (empresa.email_notificacao || empresa.whatsapp_notificacao)
+                  ? 'drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                  : ''
+              }`} />
+              <NotificationBadge empresaId={empresa.id} className="absolute -top-1 -right-1" />
+            </div>
             <span className="max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
               Notificações
             </span>
