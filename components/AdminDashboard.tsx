@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Empresa } from '../lib/authService';
 import { supabase } from '../lib/supabase';
-import { TicketStatus } from '../types';
+import { TicketStatus, Ticket } from '../types';
 import { PeriodFilter } from './PeriodFilter';
 import { AdminCharts } from './AdminCharts';
+import { AdminTicketsList } from './AdminTicketsList';
+import { AdminTicketModal } from './AdminTicketModal';
+import { IframeConfigModal } from './IframeConfigModal';
+import { NotificationBadge } from './NotificationBadge';
 import { BuildingIcon, RobotIcon, LogoutIcon } from './icons';
 
 interface AdminDashboardProps {
@@ -48,6 +52,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
   const [periodName, setPeriodName] = useState<string>('Todos');
   const [showNovaEmpresa, setShowNovaEmpresa] = useState(false);
   const [showNovaIA, setShowNovaIA] = useState(false);
+  const [showIframeConfig, setShowIframeConfig] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'tickets'>('overview');
 
   // Carregar estatísticas gerais
   useEffect(() => {
@@ -235,6 +242,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
               Nova IA
             </span>
           </button>
+
+          <button
+            onClick={() => setShowIframeConfig(true)}
+            className="group relative font-semibold py-2 px-3 rounded-lg border bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden"
+            title="Configurar Iframe"
+          >
+            <span className="text-lg">🌐</span>
+            <span className="max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
+              Iframe
+            </span>
+          </button>
           
           <button
             onClick={onLogout}
@@ -250,159 +268,197 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
       </header>
 
       <main className="max-w-7xl mx-auto">
-        {/* Filtro de Período */}
-        <div className="mb-6 flex justify-end">
-          <PeriodFilter onPeriodChange={(start, end, name) => {
-            setStartDate(start);
-            setEndDate(end);
-            setPeriodName(name);
-          }} />
+        {/* Abas de Navegação */}
+        <div className="mb-6">
+          <div className="flex space-x-1 bg-gray-800/50 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'overview'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+              }`}
+            >
+              📊 Visão Geral
+            </button>
+            <button
+              onClick={() => setActiveTab('tickets')}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 relative ${
+                activeTab === 'tickets'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+              }`}
+            >
+              🎫 Tickets
+              <NotificationBadge isAdmin={true} className="absolute top-0 right-2" />
+            </button>
+          </div>
         </div>
 
-        {/* Indicador de Período */}
-        {periodName !== 'Todos' && (
-          <div className="mb-4 p-3 bg-indigo-500/20 border border-indigo-500/50 rounded-lg backdrop-blur-sm">
-            <p className="text-indigo-300 text-sm font-medium">
-              📅 Filtrando por: <span className="text-indigo-200 font-semibold">{periodName}</span>
-            </p>
+        {/* Filtro de Período - apenas na aba overview */}
+        {activeTab === 'overview' && (
+          <div className="mb-6 flex justify-end">
+            <PeriodFilter onPeriodChange={(start, end, name) => {
+              setStartDate(start);
+              setEndDate(end);
+              setPeriodName(name);
+            }} />
           </div>
         )}
 
-        {/* Gráficos */}
-        <AdminCharts 
-          stats={{
-            totalEmpresas: estatisticas.totalEmpresas,
-            totalTickets: estatisticas.totalTickets,
-            ticketsPendentes: estatisticas.ticketsPendentes,
-            ticketsEmAnalise: estatisticas.ticketsEmAnalise,
-            ticketsResolvidos: estatisticas.ticketsResolvidos,
-            ticketsHoje: estatisticas.ticketsHoje,
-          }}
-          empresas={empresas.map(emp => ({
-            id: emp.id,
-            nome: emp.nome_empresa,
-            tickets_pendentes: emp.tickets_pendentes,
-            tickets_em_analise: emp.tickets_em_analise,
-            tickets_resolvidos: emp.tickets_resolvidos,
-          }))}
-        />
-
-        {/* Estatísticas Gerais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/30 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-200 text-sm font-medium">Total Empresas</p>
-                <p className="text-3xl font-bold text-white">{estatisticas.totalEmpresas}</p>
+        {/* Conteúdo das Abas */}
+        {activeTab === 'overview' && (
+          <>
+            {/* Indicador de Período */}
+            {periodName !== 'Todos' && (
+              <div className="mb-4 p-3 bg-indigo-500/20 border border-indigo-500/50 rounded-lg backdrop-blur-sm">
+                <p className="text-indigo-300 text-sm font-medium">
+                  📅 Filtrando por: <span className="text-indigo-200 font-semibold">{periodName}</span>
+                </p>
               </div>
-              <div className="text-3xl">🏢</div>
-            </div>
-          </div>
+            )}
 
-          <div className="bg-gradient-to-br from-gray-500/20 to-gray-600/30 backdrop-blur-sm rounded-xl p-6 border border-gray-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-200 text-sm font-medium">Total Tickets</p>
-                <p className="text-3xl font-bold text-white">{estatisticas.totalTickets}</p>
+            {/* Gráficos */}
+            <AdminCharts 
+              stats={{
+                totalEmpresas: estatisticas.totalEmpresas,
+                totalTickets: estatisticas.totalTickets,
+                ticketsPendentes: estatisticas.ticketsPendentes,
+                ticketsEmAnalise: estatisticas.ticketsEmAnalise,
+                ticketsResolvidos: estatisticas.ticketsResolvidos,
+                ticketsHoje: estatisticas.ticketsHoje,
+              }}
+              empresas={empresas.map(emp => ({
+                id: emp.id,
+                nome: emp.nome_empresa,
+                tickets_pendentes: emp.tickets_pendentes,
+                tickets_em_analise: emp.tickets_em_analise,
+                tickets_resolvidos: emp.tickets_resolvidos,
+              }))}
+            />
+
+            {/* Estatísticas Gerais */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/30 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-200 text-sm font-medium">Total Empresas</p>
+                    <p className="text-3xl font-bold text-white">{estatisticas.totalEmpresas}</p>
+                  </div>
+                  <div className="text-3xl">🏢</div>
+                </div>
               </div>
-              <div className="text-3xl">📋</div>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/30 backdrop-blur-sm rounded-xl p-6 border border-yellow-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-yellow-200 text-sm font-medium">Pendentes</p>
-                <p className="text-3xl font-bold text-white">{estatisticas.ticketsPendentes}</p>
+              <div className="bg-gradient-to-br from-gray-500/20 to-gray-600/30 backdrop-blur-sm rounded-xl p-6 border border-gray-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-200 text-sm font-medium">Total Tickets</p>
+                    <p className="text-3xl font-bold text-white">{estatisticas.totalTickets}</p>
+                  </div>
+                  <div className="text-3xl">📋</div>
+                </div>
               </div>
-              <div className="text-3xl">⏳</div>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/30 backdrop-blur-sm rounded-xl p-6 border border-indigo-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-indigo-200 text-sm font-medium">Em Análise</p>
-                <p className="text-3xl font-bold text-white">{estatisticas.ticketsEmAnalise}</p>
+              <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/30 backdrop-blur-sm rounded-xl p-6 border border-yellow-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-yellow-200 text-sm font-medium">Pendentes</p>
+                    <p className="text-3xl font-bold text-white">{estatisticas.ticketsPendentes}</p>
+                  </div>
+                  <div className="text-3xl">⏳</div>
+                </div>
               </div>
-              <div className="text-3xl">🔍</div>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-green-500/20 to-green-600/30 backdrop-blur-sm rounded-xl p-6 border border-green-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-200 text-sm font-medium">Resolvidos</p>
-                <p className="text-3xl font-bold text-white">{estatisticas.ticketsResolvidos}</p>
+              <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/30 backdrop-blur-sm rounded-xl p-6 border border-indigo-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-indigo-200 text-sm font-medium">Em Análise</p>
+                    <p className="text-3xl font-bold text-white">{estatisticas.ticketsEmAnalise}</p>
+                  </div>
+                  <div className="text-3xl">🔍</div>
+                </div>
               </div>
-              <div className="text-3xl">✅</div>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-200 text-sm font-medium">Hoje</p>
-                <p className="text-3xl font-bold text-white">{estatisticas.ticketsHoje}</p>
+              <div className="bg-gradient-to-br from-green-500/20 to-green-600/30 backdrop-blur-sm rounded-xl p-6 border border-green-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-200 text-sm font-medium">Resolvidos</p>
+                    <p className="text-3xl font-bold text-white">{estatisticas.ticketsResolvidos}</p>
+                  </div>
+                  <div className="text-3xl">✅</div>
+                </div>
               </div>
-              <div className="text-3xl">📅</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Lista de Empresas */}
-        <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-2xl p-6 border border-gray-700">
-          <h2 className="text-2xl font-bold text-white mb-6">🏢 Empresas Cadastradas</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-600">
-                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">Empresa</th>
-                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">Total</th>
-                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">Pendentes</th>
-                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">Em Análise</th>
-                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">Resolvidos</th>
-                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">Último Login</th>
-                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">Notificações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {empresas.map((empresa) => (
-                  <tr key={empresa.id} className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors duration-200">
-                    <td className="py-3 px-4 text-white font-medium">{empresa.nome_empresa}</td>
-                    <td className="py-3 px-4 text-gray-300">{empresa.total_tickets}</td>
-                    <td className="py-3 px-4 text-yellow-400">{empresa.tickets_pendentes}</td>
-                    <td className="py-3 px-4 text-blue-400">{empresa.tickets_em_analise}</td>
-                    <td className="py-3 px-4 text-green-400">{empresa.tickets_resolvidos}</td>
-                    <td className="py-3 px-4 text-gray-400 text-sm">
-                      {empresa.ultimo_login 
-                        ? new Date(empresa.ultimo_login).toLocaleDateString('pt-BR')
-                        : 'Nunca'
-                      }
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        {empresa.email_notificacao && (
-                          <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full">
-                            📧
-                          </span>
-                        )}
-                        {empresa.whatsapp_notificacao && (
-                          <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full">
-                            📱
-                          </span>
-                        )}
-                        {!empresa.email_notificacao && !empresa.whatsapp_notificacao && (
-                          <span className="text-gray-500 text-xs">Nenhuma</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-200 text-sm font-medium">Hoje</p>
+                    <p className="text-3xl font-bold text-white">{estatisticas.ticketsHoje}</p>
+                  </div>
+                  <div className="text-3xl">📅</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de Empresas */}
+            <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-2xl p-6 border border-gray-700">
+              <h2 className="text-2xl font-bold text-white mb-6">🏢 Empresas Cadastradas</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-600">
+                      <th className="text-left py-3 px-4 text-gray-300 font-semibold">Empresa</th>
+                      <th className="text-left py-3 px-4 text-gray-300 font-semibold">Total</th>
+                      <th className="text-left py-3 px-4 text-gray-300 font-semibold">Pendentes</th>
+                      <th className="text-left py-3 px-4 text-gray-300 font-semibold">Em Análise</th>
+                      <th className="text-left py-3 px-4 text-gray-300 font-semibold">Resolvidos</th>
+                      <th className="text-left py-3 px-4 text-gray-300 font-semibold">Último Login</th>
+                      <th className="text-left py-3 px-4 text-gray-300 font-semibold">Notificações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {empresas.map((empresa) => (
+                      <tr key={empresa.id} className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors duration-200">
+                        <td className="py-3 px-4 text-white font-medium">{empresa.nome_empresa}</td>
+                        <td className="py-3 px-4 text-gray-300">{empresa.total_tickets}</td>
+                        <td className="py-3 px-4 text-yellow-400">{empresa.tickets_pendentes}</td>
+                        <td className="py-3 px-4 text-blue-400">{empresa.tickets_em_analise}</td>
+                        <td className="py-3 px-4 text-green-400">{empresa.tickets_resolvidos}</td>
+                        <td className="py-3 px-4 text-gray-400 text-sm">
+                          {empresa.ultimo_login 
+                            ? new Date(empresa.ultimo_login).toLocaleDateString('pt-BR')
+                            : 'Nunca'
+                          }
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2">
+                            {empresa.email_notificacao && (
+                              <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full">
+                                📧
+                              </span>
+                            )}
+                            {empresa.whatsapp_notificacao && (
+                              <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full">
+                                📱
+                              </span>
+                            )}
+                            {!empresa.email_notificacao && !empresa.whatsapp_notificacao && (
+                              <span className="text-gray-500 text-xs">Nenhuma</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'tickets' && (
+          <AdminTicketsList onTicketSelect={setSelectedTicket} />
+        )}
       </main>
 
       {/* Modal Nova Empresa */}
@@ -419,6 +475,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
           empresas={empresas}
           onClose={() => setShowNovaIA(false)}
           onSave={handleNovaIA}
+        />
+      )}
+
+      {/* Modal Configuração Iframe */}
+      {showIframeConfig && (
+        <IframeConfigModal
+          onClose={() => setShowIframeConfig(false)}
+        />
+      )}
+
+      {/* Modal Visualizar Ticket */}
+      {selectedTicket && (
+        <AdminTicketModal
+          ticket={selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          onTicketUpdated={carregarDados}
         />
       )}
     </div>

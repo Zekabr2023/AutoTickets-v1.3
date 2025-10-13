@@ -85,7 +85,19 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
                   border: '1px solid #374151',
                   borderRadius: '8px',
                   color: '#f9fafb'
-                }} 
+                }}
+                formatter={(value, name) => {
+                  if (comparisonType === 'status') {
+                    return [value, 'Quantidade'];
+                  }
+                  return [value, name];
+                }}
+                labelFormatter={(label) => {
+                  if (comparisonType === 'status') {
+                    return `Status: ${label}`;
+                  }
+                  return `Empresa: ${label}`;
+                }}
               />
               {comparisonType === 'status' ? (
                 <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -113,7 +125,19 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
                   border: '1px solid #374151',
                   borderRadius: '8px',
                   color: '#f9fafb'
-                }} 
+                }}
+                formatter={(value, name) => {
+                  if (comparisonType === 'status') {
+                    return [value, 'Quantidade'];
+                  }
+                  return [value, name];
+                }}
+                labelFormatter={(label) => {
+                  if (comparisonType === 'status') {
+                    return `Status: ${label}`;
+                  }
+                  return `Empresa: ${label}`;
+                }}
               />
               {comparisonType === 'status' ? (
                 <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6' }} />
@@ -151,7 +175,9 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
                   border: '1px solid #374151',
                   borderRadius: '8px',
                   color: '#f9fafb'
-                }} 
+                }}
+                formatter={(value, name) => [value, 'Quantidade']}
+                labelFormatter={(label) => `Status: ${label}`}
               />
             </PieChart>
           </ResponsiveContainer>
