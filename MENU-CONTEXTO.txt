@@ -277,3 +277,5 @@ Data: 09/10/2025
 Funcionalidades: Menu de Contexto + Animação Visual
 
 
+
+

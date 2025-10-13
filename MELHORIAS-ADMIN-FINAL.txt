@@ -241,3 +241,5 @@ Versão: 2.3.0
 Data: 09/10/2025
 Melhorias: Dropdown Períodos + Botões Padronizados + Gráficos Otimizados
 
+
+

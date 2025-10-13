@@ -187,3 +187,5 @@ Versão: 2.0.4
 Data: 09/10/2025
 Correções: Menu Contexto + Visual + Posicionamento
 
+
+

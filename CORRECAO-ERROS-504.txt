@@ -153,3 +153,5 @@ Versão: 2.2.1
 Data: 09/10/2025
 Correção: Erros 504 + Tela Branca Resolvidos
 
+
+

@@ -302,3 +302,5 @@ Versão: 2.2.0
 Data: 09/10/2025
 Melhorias: Painel Admin Completo + Gráficos + Calendário Elegante
 
+
+
