@@ -28,6 +28,9 @@ export interface Ticket {
   createdAt: string;
   attachments: { name: string; url: string }[];
   urgency: UrgencyLevel;
+  solucao?: string;
+  resolvidoPor?: string;
+  resolvidoEm?: string;
 }
 
 export interface User {

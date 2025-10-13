@@ -15,6 +15,9 @@ export interface TicketDB {
   status: string;
   urgencia: string;
   imagens?: { name: string; url: string }[];
+  solucao?: string;
+  resolvido_por?: string;
+  resolvido_em?: string;
   criado_em: string;
   atualizado_em: string;
 }
@@ -44,6 +47,9 @@ const converterTicketDB = (ticketDB: TicketDB): Ticket => ({
   createdAt: ticketDB.criado_em,
   attachments: ticketDB.imagens || [], // Carregar imagens do banco
   urgency: ticketDB.urgencia as UrgencyLevel,
+  solucao: ticketDB.solucao,
+  resolvidoPor: ticketDB.resolvido_por,
+  resolvidoEm: ticketDB.resolvido_em,
 });
 
 export const ticketService = {
@@ -214,6 +220,58 @@ export const ticketService = {
     } catch (error) {
       console.error('Erro ao atualizar status do ticket:', error);
       return { success: false, error: 'Erro ao atualizar status' };
+    }
+  },
+
+  /**
+   * Resolve um ticket com solução
+   */
+  async resolverTicket(ticketId: string, solucao: string, resolvidoPor: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ 
+          status: TicketStatus.Resolved,
+          solucao,
+          resolvido_por: resolvidoPor,
+          resolvido_em: new Date().toISOString()
+        })
+        .eq('id', ticketId);
+
+      if (error) {
+        console.error('Erro ao resolver ticket:', error);
+        return { success: false, error: 'Erro ao resolver ticket' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao resolver ticket:', error);
+      return { success: false, error: 'Erro ao resolver ticket' };
+    }
+  },
+
+  /**
+   * Busca todos os tickets (para admin)
+   */
+  async buscarTodosTickets(): Promise<Ticket[]> {
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          empresas!inner(nome_empresa)
+        `)
+        .order('criado_em', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar todos os tickets:', error);
+        return [];
+      }
+
+      return (data || []).map(converterTicketDB);
+    } catch (error) {
+      console.error('Erro ao buscar todos os tickets:', error);
+      return [];
     }
   },
 
