@@ -3,6 +3,21 @@ import { Ticket, TicketStatus, UrgencyLevel } from '../types';
 import { enviarWebhookTicket, enviarWebhookDeletar } from './webhooks';
 import { imageService } from './imageService';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+// Helper
+const notifyBackend = async (endpoint: string, body: any) => {
+  try {
+    fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).catch(err => console.error(`Failed to notify ${endpoint}:`, err));
+  } catch (err) {
+    console.error(`Failed to notify ${endpoint}:`, err);
+  }
+};
+
 export interface TicketDB {
   id: string;
   numero: number;
@@ -20,6 +35,13 @@ export interface TicketDB {
   resolvido_em?: string;
   criado_em: string;
   atualizado_em: string;
+  empresas?: { nome_empresa: string };
+  solicitacao_info?: string;
+  resposta_cliente?: string;
+  imagens_solucao?: { name: string; url: string }[];
+  chat_history?: { sender: 'Admin' | 'Client'; message: string; timestamp: string }[];
+  aguardando_info_desde?: string;
+  solicitante_nome?: string;
 }
 
 export interface NovoTicketData {
@@ -31,6 +53,7 @@ export interface NovoTicketData {
   ai_id: string;
   ai_name: string;
   urgencia: UrgencyLevel;
+  solicitante_nome?: string;
   imagens?: File[];
 }
 
@@ -38,6 +61,7 @@ export interface NovoTicketData {
 const converterTicketDB = (ticketDB: TicketDB): Ticket => ({
   id: ticketDB.id,
   numero: ticketDB.numero,
+  empresaNome: ticketDB.empresas?.nome_empresa,
   title: ticketDB.titulo,
   description: ticketDB.descricao,
   whatShouldHappen: ticketDB.o_que_deveria_acontecer,
@@ -50,7 +74,53 @@ const converterTicketDB = (ticketDB: TicketDB): Ticket => ({
   solucao: ticketDB.solucao,
   resolvidoPor: ticketDB.resolvido_por,
   resolvidoEm: ticketDB.resolvido_em,
+  solicitacaoInfo: ticketDB.solicitacao_info,
+  respostaCliente: ticketDB.resposta_cliente,
+  attachmentsSolution: ticketDB.imagens_solucao || [],
+  chatHistory: ticketDB.chat_history || [],
+  aguardandoInfoDesde: ticketDB.aguardando_info_desde,
+  solicitanteNome: ticketDB.solicitante_nome,
 });
+
+// Helper for Status Notification
+const sendStatusNotification = async (ticketId: string, status: string) => {
+  try {
+    const { data: ticketData, error } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        empresas (
+          nome_empresa,
+          whatsapp_notificacao,
+          email_notificacao
+        )
+      `)
+      .eq('id', ticketId)
+      .single();
+
+    if (!error && ticketData) {
+      const empresa = ticketData.empresas;
+      /* @ts-ignore */
+      const clientPhone = empresa?.whatsapp_notificacao;
+      /* @ts-ignore */
+      const clientEmail = empresa?.email_notificacao;
+
+      notifyBackend('/notify/status-change', {
+        ticket: {
+          id: ticketData.id, // Adicionado UUID para deep linking seguro
+          numero: ticketData.numero,
+          titulo: ticketData.titulo,
+          status: status
+        },
+        newStatus: status,
+        clientPhone,
+        clientEmail
+      });
+    }
+  } catch (err) {
+    console.error('Error sending status notification:', err);
+  }
+};
 
 export const ticketService = {
   /**
@@ -129,7 +199,7 @@ export const ticketService = {
   async criarTicket(novoTicket: NovoTicketData): Promise<{ success: boolean; ticket?: Ticket; error?: string }> {
     try {
       console.log('📝 Criando ticket...');
-      
+
       // Primeiro, inserir o ticket para obter o número
       const { data: ticketDB, error } = await supabase
         .from('tickets')
@@ -142,6 +212,7 @@ export const ticketService = {
           ai_id: novoTicket.ai_id,
           ai_name: novoTicket.ai_name,
           urgencia: novoTicket.urgencia,
+          solicitante_nome: novoTicket.solicitante_nome,
           status: TicketStatus.Pending,
           imagens: [], // Inicialmente vazio
         }])
@@ -157,12 +228,12 @@ export const ticketService = {
 
       // Se há imagens, fazer upload e atualizar o ticket
       let imagensUpload: { name: string; url: string }[] = [];
-      
+
       if (novoTicket.imagens && novoTicket.imagens.length > 0) {
         console.log(`📸 Fazendo upload de ${novoTicket.imagens.length} imagem(ns)...`);
-        
+
         imagensUpload = await imageService.uploadImages(novoTicket.imagens, ticketDB.numero);
-        
+
         console.log(`✅ ${imagensUpload.length} imagem(ns) enviada(s) com sucesso!`);
 
         // Atualizar o ticket com as URLs das imagens
@@ -180,6 +251,20 @@ export const ticketService = {
           }
         }
       }
+
+      // Enviar notificação para o Backend (Discord)
+      notifyBackend('/notify/discord', {
+        ticket: {
+          numero: ticketDB.numero,
+          titulo: novoTicket.titulo,
+          descricao: novoTicket.descricao,
+          urgencia: novoTicket.urgencia,
+          ai_name: novoTicket.ai_name,
+          id: ticketDB.id
+        },
+        empresa: novoTicket.empresa_nome,
+        frontendUrl: typeof window !== 'undefined' ? window.location.origin : ''
+      });
 
       // Enviar webhook para n8n (não bloqueante)
       enviarWebhookTicket({
@@ -202,19 +287,63 @@ export const ticketService = {
   },
 
   /**
+   * Atualiza o status de um ticket (Simples, lança erro se falhar) - Usado no Kanban
+   */
+  async atualizarStatus(ticketId: string, status: TicketStatus): Promise<void> {
+    // Build update payload
+    const updatePayload: any = { status };
+
+    // Se está movendo para "Aguardando Info", iniciar cronômetro de 48h
+    if (status === TicketStatus.AwaitingInfo) {
+      updatePayload.aguardando_info_desde = new Date().toISOString();
+    } else {
+      // Se saindo de "Aguardando Info", limpar o cronômetro
+      updatePayload.aguardando_info_desde = null;
+    }
+
+    // 1. Update in Supabase
+    const { error } = await supabase
+      .from('tickets')
+      .update(updatePayload)
+      .eq('id', ticketId);
+
+    if (error) {
+      console.error('Erro ao atualizar status (Kanban):', error);
+      throw error;
+    }
+
+    // 2. Notify (Async)
+    sendStatusNotification(ticketId, status);
+  },
+
+  /**
    * Atualiza o status de um ticket
    */
   async atualizarStatusTicket(ticketId: string, novoStatus: TicketStatus): Promise<{ success: boolean; error?: string }> {
     try {
+      // Build update payload
+      const updatePayload: any = { status: novoStatus };
+
+      // Se está movendo para "Aguardando Info", iniciar cronômetro de 48h
+      if (novoStatus === TicketStatus.AwaitingInfo) {
+        updatePayload.aguardando_info_desde = new Date().toISOString();
+      } else {
+        // Se saindo de "Aguardando Info", limpar o cronômetro
+        updatePayload.aguardando_info_desde = null;
+      }
+
       const { error } = await supabase
         .from('tickets')
-        .update({ status: novoStatus })
+        .update(updatePayload)
         .eq('id', ticketId);
 
       if (error) {
         console.error('Erro ao atualizar status do ticket:', error);
         return { success: false, error: 'Erro ao atualizar status' };
       }
+
+      // Notificar mudança de status
+      sendStatusNotification(ticketId, novoStatus);
 
       return { success: true };
     } catch (error) {
@@ -224,24 +353,158 @@ export const ticketService = {
   },
 
   /**
-   * Resolve um ticket com solução
+   * Solicita informação ao cliente (Adiciona ao histórico de chat)
    */
-  async resolverTicket(ticketId: string, solucao: string, resolvidoPor: string): Promise<{ success: boolean; error?: string }> {
+  /**
+   * Solicita informação ao cliente (Adiciona ao histórico de chat)
+   */
+  async solicitarInformacao(ticketId: string, pergunta: string, adminName?: string): Promise<{ success: boolean; error?: string }> {
     try {
+      // 1. Buscar histórico atual
+      const { data: ticket, error: fetchError } = await supabase
+        .from('tickets')
+        .select('chat_history')
+        .eq('id', ticketId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentHistory = ticket.chat_history || [];
+
+      // 2. Adicionar nova mensagem
+      const newMessage = {
+        sender: 'Admin',
+        adminName: adminName, // Opcional: Identifica qual admin respondeu
+        message: pergunta,
+        timestamp: new Date().toISOString()
+      };
+
+      const updatedHistory = [...currentHistory, newMessage];
+
+      // 3. Atualizar (status, solicitacao_info para compatibilidade, e histórico)
+      // Também inicia o cronômetro de aceitação tácita (48h)
       const { error } = await supabase
         .from('tickets')
-        .update({ 
-          status: TicketStatus.Resolved,
-          solucao,
-          resolvido_por: resolvidoPor,
-          resolvido_em: new Date().toISOString()
+        .update({
+          status: TicketStatus.AwaitingInfo,
+          solicitacao_info: pergunta, // Mantendo para compatibilidade/visualização rápida
+          resposta_cliente: null,     // Limpa resposta anterior de "last interaction"
+          chat_history: updatedHistory,
+          aguardando_info_desde: new Date().toISOString() // Inicia cronômetro de 48h
         })
+        .eq('id', ticketId);
+
+      if (error) {
+        console.error('Erro ao solicitar informação:', error);
+        return { success: false, error: 'Erro ao salvar solicitação' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao solicitar informação:', error);
+      return { success: false, error: 'Erro ao solicitar informação' };
+    }
+  },
+
+  /**
+   * Responde a uma solicitação de informação (Cliente - Adiciona ao histórico)
+   */
+  async responderSolicitacao(ticketId: string, resposta: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // 1. Buscar histórico atual
+      const { data: ticket, error: fetchError } = await supabase
+        .from('tickets')
+        .select('chat_history')
+        .eq('id', ticketId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentHistory = ticket.chat_history || [];
+
+      // 2. Adicionar nova mensagem
+      const newMessage = {
+        sender: 'Client',
+        message: resposta,
+        timestamp: new Date().toISOString()
+      };
+
+      const updatedHistory = [...currentHistory, newMessage];
+
+      // 3. Atualizar (status, resposta_cliente para compatibilidade, e histórico)
+      // Limpa o cronômetro de aceitação tácita pois o cliente respondeu
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          status: TicketStatus.InAnalysis, // Volta para em análise
+          resposta_cliente: resposta,      // Mantendo para compatibilidade
+          chat_history: updatedHistory,
+          aguardando_info_desde: null      // Cliente respondeu, limpa cronômetro
+        })
+        .eq('id', ticketId);
+
+      if (error) {
+        console.error('Erro ao enviar resposta:', error);
+        return { success: false, error: 'Erro ao enviar resposta' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao enviar resposta:', error);
+      return { success: false, error: 'Erro ao enviar resposta' };
+    }
+  },
+
+  /**
+   * Resolve um ticket com solução
+   */
+  /**
+   * Resolve um ticket com solução e imagens
+   */
+  async resolverTicket(ticketId: string, solucao: string, resolvidoPor: string, imagens?: File[]): Promise<{ success: boolean; error?: string }> {
+    try {
+      let imagensUpload: { name: string; url: string }[] = [];
+
+      // Se há imagens, fazer upload
+      if (imagens && imagens.length > 0) {
+        // Preciso do número do ticket para o upload. Buscar ticket atual.
+        const { data: ticketDB, error: fetchError } = await supabase
+          .from('tickets')
+          .select('numero')
+          .eq('id', ticketId)
+          .single();
+
+        if (ticketDB) {
+          console.log(`📸 Fazendo upload de imagens de solução para ticket #${ticketDB.numero}...`);
+          imagensUpload = await imageService.uploadImages(imagens, ticketDB.numero);
+        } else {
+          console.error('Erro ao buscar ticket para upload de imagens:', fetchError);
+        }
+      }
+
+      const updateData: any = {
+        status: TicketStatus.Resolved,
+        solucao,
+        resolvido_por: resolvidoPor,
+        resolvido_em: new Date().toISOString()
+      };
+
+      if (imagensUpload.length > 0) {
+        updateData.imagens_solucao = imagensUpload;
+      }
+
+      const { error } = await supabase
+        .from('tickets')
+        .update(updateData)
         .eq('id', ticketId);
 
       if (error) {
         console.error('Erro ao resolver ticket:', error);
         return { success: false, error: 'Erro ao resolver ticket' };
       }
+
+      // Notificar resolução
+      sendStatusNotification(ticketId, TicketStatus.Resolved);
 
       return { success: true };
     } catch (error) {
@@ -283,7 +546,7 @@ export const ticketService = {
     try {
       console.log('[ticketService] 🗑️ Iniciando processo de deleção (otimista)');
       console.log('[ticketService] Ticket ID:', ticketId);
-      
+
       // Buscar número do ticket ANTES de deletar (para enviar no webhook)
       const { data: ticketParaDeletar, error: errorBusca } = await supabase
         .from('tickets')
@@ -301,17 +564,17 @@ export const ticketService = {
 
       // Enviar webhook IMEDIATAMENTE (para apagar do Trello)
       console.log('[ticketService] 📤 Enviando webhook de deleção...');
-      enviarWebhookDeletar(ticketNumero).catch(err => 
+      enviarWebhookDeletar(ticketNumero).catch(err =>
         console.error('Erro ao enviar webhook de deleção:', err)
       );
 
       // Agendar deleção do banco para daqui a 15 segundos
       console.log('[ticketService] ⏱️ Agendando deleção do banco em 15 segundos...');
       console.log('[ticketService] ✅ Cliente vê exclusão instantânea (UI atualiza agora)');
-      
+
       setTimeout(async () => {
         console.log('[ticketService] 🗄️ Executando deleção do banco (após 15s)...');
-        
+
         const { error: deleteError } = await supabase
           .from('tickets')
           .delete()

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CloseIcon } from './icons';
 import { Empresa } from '../lib/authService';
 import { supabase } from '../lib/supabase';
+import { useToast } from './ToastProvider';
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -10,12 +11,13 @@ interface NotificationSettingsModalProps {
   onUpdate: (empresa: Empresa) => void;
 }
 
-export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ 
-  isOpen, 
-  onClose, 
+export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
+  isOpen,
+  onClose,
   empresa,
-  onUpdate 
+  onUpdate
 }) => {
+  const toast = useToast();
   const [email, setEmail] = useState(empresa.email_notificacao || '');
   const [whatsapp, setWhatsapp] = useState(empresa.whatsapp_notificacao || '');
   const [notificacoesAtivas, setNotificacoesAtivas] = useState(empresa.notificacoes_ativas ?? true);
@@ -44,12 +46,12 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
           notificacoes_ativas: notificacoesAtivas,
         })
         .eq('id', empresa.id)
-        .select()
+        .select('id, nome_empresa, ultimo_login, email_notificacao, whatsapp_notificacao, notificacoes_ativas, is_admin, criado_em, atualizado_em')
         .single();
 
       if (error) {
         console.error('Erro ao salvar configurações:', error);
-        alert('Erro ao salvar configurações. Tente novamente.');
+        toast.error('Erro ao salvar configurações. Tente novamente.');
         setIsSaving(false);
         return;
       }
@@ -64,7 +66,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
       }
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      alert('Erro ao salvar configurações.');
+      toast.error('Erro ao salvar configurações.');
     } finally {
       setIsSaving(false);
     }
@@ -103,14 +105,12 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
               </div>
               <button
                 onClick={() => setNotificacoesAtivas(!notificacoesAtivas)}
-                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                  notificacoesAtivas ? 'bg-indigo-600' : 'bg-gray-600'
-                }`}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${notificacoesAtivas ? 'bg-indigo-600' : 'bg-gray-600'
+                  }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                    notificacoesAtivas ? 'translate-x-7' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${notificacoesAtivas ? 'translate-x-7' : 'translate-x-1'
+                    }`}
                 />
               </button>
             </div>
@@ -189,6 +189,10 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
     </div>
   );
 };
+
+
+
+
 
 
 

@@ -79,9 +79,9 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="name" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1f2937', 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
                   border: '1px solid #374151',
                   borderRadius: '8px',
                   color: '#f9fafb'
@@ -100,7 +100,11 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
                 }}
               />
               {comparisonType === 'status' ? (
-                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color || '#3b82f6'} />
+                  ))}
+                </Bar>
               ) : (
                 <>
                   <Bar dataKey="pendentes" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
@@ -119,9 +123,9 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="name" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1f2937', 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
                   border: '1px solid #374151',
                   borderRadius: '8px',
                   color: '#f9fafb'
@@ -169,9 +173,9 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1f2937', 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
                   border: '1px solid #374151',
                   borderRadius: '8px',
                   color: '#f9fafb'
@@ -192,7 +196,7 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
     <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-2xl p-6 border border-gray-700 mb-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-white">📊 Análises Visuais</h2>
-        
+
         {/* Controles */}
         <div className="flex gap-4">
           {/* Tipo de Gráfico */}

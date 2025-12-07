@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 export interface Empresa {
   id: string;
   nome_empresa: string;
-  senha: string;
+  // senha: string; // Remocao por seguranca
   ultimo_login: string | null;
   email_notificacao?: string | null;
   whatsapp_notificacao?: string | null;
@@ -15,37 +15,27 @@ export interface Empresa {
 
 export const authService = {
   /**
-   * Realiza o login de uma empresa
+   * Realiza o login de uma empresa usando RPC seguro
    */
   async login(nomeEmpresa: string, senha: string): Promise<{ success: boolean; empresa?: Empresa; error?: string }> {
     try {
-      // Buscar empresa pelo nome
-      const { data: empresa, error } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('nome_empresa', nomeEmpresa)
-        .single();
+      const { data, error } = await supabase.rpc('login_empresa', {
+        p_nome_empresa: nomeEmpresa,
+        p_senha: senha
+      });
 
-      if (error || !empresa) {
-        return { success: false, error: 'Empresa não encontrada' };
+      if (error) {
+        console.error('Erro no login:', error);
+        return {
+          success: false,
+          // Melhora mensagem de erro para o usuário
+          error: error.message === 'Empresa não encontrada' || error.message === 'Senha inválida'
+            ? 'Usuário ou senha inválidos'
+            : 'Erro ao fazer login'
+        };
       }
 
-      // Verificar senha
-      if (empresa.senha !== senha) {
-        return { success: false, error: 'Senha inválida' };
-      }
-
-      // Atualizar último login
-      const { error: updateError } = await supabase
-        .from('empresas')
-        .update({ ultimo_login: new Date().toISOString() })
-        .eq('id', empresa.id);
-
-      if (updateError) {
-        console.error('Erro ao atualizar último login:', updateError);
-      }
-
-      return { success: true, empresa };
+      return { success: true, empresa: data as Empresa };
     } catch (error) {
       console.error('Erro no login:', error);
       return { success: false, error: 'Erro ao fazer login' };
@@ -53,14 +43,16 @@ export const authService = {
   },
 
   /**
-   * Cria uma nova empresa
+   * Cria uma nova empresa (ou supervisor se isAdmin=true)
    */
-  async criarEmpresa(nomeEmpresa: string, senha: string = 'Suporteautomabo'): Promise<{ success: boolean; empresa?: Empresa; error?: string }> {
+  async criarEmpresa(nomeEmpresa: string, senha: string = 'Suporteautomabo', isAdmin: boolean = false): Promise<{ success: boolean; empresa?: Empresa; error?: string }> {
     try {
+      // Inserção continua normal, pois INSERT na tabela ainda é permitido (se RLS deixar)
+      // Mas o retorno deve ser explícito para não tentar ler 'senha'
       const { data: empresa, error } = await supabase
         .from('empresas')
-        .insert([{ nome_empresa: nomeEmpresa, senha }])
-        .select()
+        .insert([{ nome_empresa: nomeEmpresa, senha, is_admin: isAdmin }])
+        .select('id, nome_empresa, ultimo_login, email_notificacao, whatsapp_notificacao, notificacoes_ativas, is_admin, criado_em, atualizado_em')
         .single();
 
       if (error) {
@@ -81,7 +73,7 @@ export const authService = {
     try {
       const { data, error } = await supabase
         .from('empresas')
-        .select('*')
+        .select('id, nome_empresa, ultimo_login, email_notificacao, whatsapp_notificacao, notificacoes_ativas, is_admin, criado_em, atualizado_em')
         .order('nome_empresa', { ascending: true });
 
       if (error) {

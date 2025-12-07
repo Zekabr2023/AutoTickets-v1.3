@@ -2,47 +2,65 @@ import React, { useState, useEffect } from 'react';
 import { Ticket, TicketStatus } from '../types';
 import { TicketList } from './TicketList';
 import { TicketDetailsModal } from './TicketDetailsModal';
-import { NotificationSettingsModal } from './NotificationSettingsModal';
+import { ClientSettingsModal } from './ClientSettingsModal';
 import { NotificationBadge } from './NotificationBadge';
 import { BellIcon, SearchIcon } from './icons';
 import { Empresa } from '../lib/authService';
 import { ticketService } from '../lib/ticketService';
+import { useToast } from './ToastProvider';
 
 interface DashboardProps {
-    empresa: Empresa;
-    onOpenNewTicket: () => void;
-    onLogout: () => void;
-    onEmpresaUpdate: (empresa: Empresa) => void;
+  empresa: Empresa;
+  onOpenNewTicket: () => void;
+  onLogout: () => void;
+  onEmpresaUpdate: (empresa: Empresa) => void;
+  initialTicketId?: string | null;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, onLogout, onEmpresaUpdate }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, onLogout, onEmpresaUpdate, initialTicketId }) => {
+  const toast = useToast();
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [showClientSettings, setShowClientSettings] = useState(false);
   const [searchNumero, setSearchNumero] = useState('');
   const [searchedTicket, setSearchedTicket] = useState<Ticket | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [deletingTicketIds, setDeletingTicketIds] = useState<string[]>([]);
+  const [notificationsHidden, setNotificationsHidden] = useState(false);
+
+  // Deep Link handler
+  useEffect(() => {
+    if (initialTicketId && tickets.length > 0 && !selectedTicket) {
+      const linkedTicket = tickets.find(t => t.id === initialTicketId);
+      if (linkedTicket) {
+        console.log("🔗 Opening Deep Linked Ticket (Client):", linkedTicket.numero);
+        setSelectedTicket(linkedTicket);
+        // Clear localStorage after successfully opening
+        localStorage.removeItem('pendingTicketId');
+      } else {
+        console.warn("⚠️ Deep Link ticket not found or not owned by this company:", initialTicketId);
+        toast.warning("O ticket solicitado não foi encontrado ou não pertence à sua empresa.");
+        localStorage.removeItem('pendingTicketId');
+      }
+    }
+  }, [initialTicketId, tickets]);
 
   // Carregar tickets ao montar o componente
-  useEffect(() => {
-    const carregarTickets = async () => {
-      setIsLoading(true);
-      const ticketsCarregados = await ticketService.buscarTickets(empresa.id);
-      setTickets(ticketsCarregados);
-      setIsLoading(false);
-    };
+  const carregarTickets = async () => {
+    setIsLoading(true);
+    const ticketsCarregados = await ticketService.buscarTickets(empresa.id);
+    setTickets(ticketsCarregados);
+    setIsLoading(false);
+  };
 
+  useEffect(() => {
     carregarTickets();
   }, [empresa.id]);
 
-  // Inscrever-se para atualizações em tempo real
   useEffect(() => {
     const subscription = ticketService.inscreverAtualizacoes(empresa.id, (payload) => {
       console.log('Atualização em tempo real:', payload);
-      
-      // Recarregar tickets quando houver mudanças
       ticketService.buscarTickets(empresa.id).then(setTickets);
     });
 
@@ -51,12 +69,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
     };
   }, [empresa.id]);
 
-  const pendingTickets = tickets.filter(t => t.status === TicketStatus.Pending);
+  const pendingTickets = tickets.filter(t => t.status === TicketStatus.Pending || t.status === TicketStatus.AwaitingInfo);
   const inAnalysisTickets = tickets.filter(t => t.status === TicketStatus.InAnalysis);
   const resolvedTickets = tickets.filter(t => t.status === TicketStatus.Resolved);
 
   const totalTickets = tickets.length;
-  const pendingCount = pendingTickets.length;
+  // const pendingCount = pendingTickets.length; // unused var removed
+  const pendingOrWaitingCount = pendingTickets.length;
   const inAnalysisCount = inAnalysisTickets.length;
   const resolvedCount = resolvedTickets.length;
   const resolutionRate = totalTickets > 0 ? Math.round((resolvedCount / totalTickets) * 100) : 100;
@@ -69,7 +88,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
 
     const numero = parseInt(searchNumero);
     if (isNaN(numero)) {
-      alert('Digite um número válido');
+      toast.warning('Digite um número válido');
       return;
     }
 
@@ -78,7 +97,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
       setSearchedTicket(ticket);
       setSelectedTicket(ticket);
     } else {
-      alert(`Ticket #${searchNumero} não encontrado`);
+      toast.error(`Ticket #${searchNumero} não encontrado`);
       setSearchedTicket(null);
     }
   };
@@ -98,47 +117,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
   };
 
   const handleDeleteTicket = async (ticketId: string) => {
-    console.log('🎬 Iniciando exclusão otimista do ticket:', ticketId);
-    
+    if (!confirm('ATENÇÃO: Tem certeza que deseja deletar este ticket? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
     try {
-      // Adicionar à lista de "sendo deletados" para animação
       setDeletingTicketIds(prev => [...prev, ticketId]);
-      console.log('🎬 Animação de fade-out iniciada...');
-      
-      // Aguardar animação (500ms)
+
+      // Simular delay da animação
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // EXCLUSÃO OTIMISTA: Remove da UI após animação
-      console.log('✨ Removendo ticket da interface (otimista)...');
-      const ticketsAtualizados = tickets.filter(t => t.id !== ticketId);
-      setTickets(ticketsAtualizados);
+
+      // Otmista
+      setTickets(prev => prev.filter(t => t.id !== ticketId));
       setDeletingTicketIds(prev => prev.filter(id => id !== ticketId));
-      
-      console.log('✅ Ticket removido da visualização!');
-      console.log('📊 Estatísticas atualizadas instantaneamente');
-      
-      // Chamar serviço de deleção (webhook + delay banco)
+
       const result = await ticketService.deletarTicket(ticketId);
-      
-      if (result.success) {
-        console.log('✅ Processo de deleção iniciado com sucesso!');
-        console.log('📤 Webhook enviado para apagar do Trello');
-        console.log('⏱️ Banco será limpo em 15 segundos');
-      } else {
-        console.error('❌ Erro ao deletar ticket:', result.error);
-        // Reverter remoção otimista em caso de erro
-        const ticketsRestaurados = await ticketService.buscarTickets(empresa.id);
-        setTickets(ticketsRestaurados);
-        setDeletingTicketIds([]);
-        alert(`Erro ao deletar chamado: ${result.error || 'Erro desconhecido'}`);
+
+      if (!result.success) {
+        throw new Error(result.error);
       }
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('❌ Exceção ao deletar ticket:', error);
-      // Reverter em caso de erro
       const ticketsRestaurados = await ticketService.buscarTickets(empresa.id);
       setTickets(ticketsRestaurados);
       setDeletingTicketIds([]);
-      alert('Erro ao deletar chamado. Veja o console para detalhes.');
+      toast.error(`Erro ao deletar chamado: ${error.message || 'Erro desconhecido'}`);
     }
   };
 
@@ -185,24 +189,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
           </div>
 
           <button
-            onClick={() => setShowNotificationSettings(true)}
-            className={`group relative font-semibold py-2 px-3 rounded-lg border transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden ${
-              empresa.notificacoes_ativas && (empresa.email_notificacao || empresa.whatsapp_notificacao)
-                ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50 hover:bg-yellow-500/30 hover:border-yellow-500'
-                : 'bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 hover:border-gray-500'
-            }`}
-            title="Configurar Notificações"
+            onClick={() => {
+              setShowClientSettings(true);
+              setNotificationsHidden(true);
+            }}
+            className={`group relative font-semibold py-2 px-3 rounded-lg border transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden ${empresa.email_notificacao || empresa.whatsapp_notificacao
+              ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50 hover:bg-yellow-500/30 hover:border-yellow-500'
+              : 'bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 hover:border-gray-500'
+              }`}
+            title="Minhas Preferências"
           >
             <div className="relative">
-              <BellIcon className={`w-5 h-5 transition-transform duration-300 group-hover:scale-110 ${
-                empresa.notificacoes_ativas && (empresa.email_notificacao || empresa.whatsapp_notificacao)
-                  ? 'drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
-                  : ''
-              }`} />
-              <NotificationBadge empresaId={empresa.id} className="absolute -top-1 -right-1" />
+              <BellIcon className={`w-5 h-5 transition-transform duration-300 group-hover:scale-110 ${empresa.email_notificacao || empresa.whatsapp_notificacao
+                ? 'drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                : ''
+                }`} />
+              <NotificationBadge empresaId={empresa.id} className="absolute -top-1 -right-1" forceHidden={notificationsHidden} />
             </div>
             <span className="max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
-              Notificações
+              Preferências
             </span>
           </button>
           <button
@@ -219,7 +224,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
           </button>
         </div>
       </header>
-      
+
       <main className="max-w-7xl mx-auto">
         {/* Resultado da Busca */}
         {searchedTicket && (
@@ -239,31 +244,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
         )}
 
         <div className="mb-8 p-6 bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-700">
-            <h3 className="text-xl font-bold text-white mb-4">Resumo da Operação</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-gray-900/70 p-4 rounded-lg text-center border border-gray-700">
-                    <p className="text-4xl font-extrabold text-yellow-400">{pendingCount}</p>
-                    <p className="text-sm text-gray-400 mt-1">Pendentes</p>
-                </div>
-                <div className="bg-gray-900/70 p-4 rounded-lg text-center border border-gray-700">
-                    <p className="text-4xl font-extrabold text-blue-400">{inAnalysisCount}</p>
-                    <p className="text-sm text-gray-400 mt-1">Em Análise</p>
-                </div>
-                <div className="bg-gray-900/70 p-4 rounded-lg text-center border border-gray-700">
-                    <p className="text-4xl font-extrabold text-green-400">{resolvedCount}</p>
-                    <p className="text-sm text-gray-400 mt-1">Resolvidos</p>
-                </div>
-                <div className="bg-gray-900/70 p-4 rounded-lg border border-gray-700 flex flex-col justify-center">
-                    <div className="flex justify-between items-center mb-1">
-                        <p className="text-sm font-medium text-gray-300">Taxa de Resolução</p>
-                        <p className="text-lg font-bold text-indigo-400">{resolutionRate}%</p>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2.5">
-                        <div className="bg-indigo-500 h-2.5 rounded-full" style={{ width: `${resolutionRate}%` }}></div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1 text-center">Nossa meta é a sua tranquilidade.</p>
-                </div>
+          <h3 className="text-xl font-bold text-white mb-4">Resumo da Operação</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gray-900/70 p-4 rounded-lg text-center border border-gray-700">
+              <p className="text-4xl font-extrabold text-yellow-400">{pendingOrWaitingCount}</p>
+              <p className="text-sm text-gray-400 mt-1">Pendentes</p>
             </div>
+            <div className="bg-gray-900/70 p-4 rounded-lg text-center border border-gray-700">
+              <p className="text-4xl font-extrabold text-blue-400">{inAnalysisCount}</p>
+              <p className="text-sm text-gray-400 mt-1">Em Análise</p>
+            </div>
+            <div className="bg-gray-900/70 p-4 rounded-lg text-center border border-gray-700">
+              <p className="text-4xl font-extrabold text-green-400">{resolvedCount}</p>
+              <p className="text-sm text-gray-400 mt-1">Resolvidos</p>
+            </div>
+            <div className="bg-gray-900/70 p-4 rounded-lg border border-gray-700 flex flex-col justify-center">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-sm font-medium text-gray-300">Taxa de Resolução</p>
+                <p className="text-lg font-bold text-indigo-400">{resolutionRate}%</p>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2.5">
+                <div className="bg-indigo-500 h-2.5 rounded-full" style={{ width: `${resolutionRate}%` }}></div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1 text-center">Nossa meta é a sua tranquilidade.</p>
+            </div>
+          </div>
         </div>
 
         {isLoading ? (
@@ -272,23 +277,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <TicketList 
-              title="Pendentes" 
-              tickets={pendingTickets} 
+            <TicketList
+              title="Pendentes"
+              tickets={pendingTickets}
               onTicketClick={setSelectedTicket}
               onTicketDelete={handleDeleteTicket}
               deletingTicketIds={deletingTicketIds}
             />
-            <TicketList 
-              title="Em Análise" 
-              tickets={inAnalysisTickets} 
+            <TicketList
+              title="Em Análise"
+              tickets={inAnalysisTickets}
               onTicketClick={setSelectedTicket}
               onTicketDelete={handleDeleteTicket}
               deletingTicketIds={deletingTicketIds}
             />
-            <TicketList 
-              title="Resolvidos" 
-              tickets={resolvedTickets} 
+            <TicketList
+              title="Resolvidos"
+              tickets={resolvedTickets}
               onTicketClick={setSelectedTicket}
               onTicketDelete={handleDeleteTicket}
               deletingTicketIds={deletingTicketIds}
@@ -297,18 +302,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ empresa, onOpenNewTicket, 
         )}
       </main>
 
-      <TicketDetailsModal 
-        ticket={selectedTicket} 
-        onClose={() => setSelectedTicket(null)} 
-        onDelete={handleDeleteTicket}
-      />
+      {/* Modal Visualizar Ticket */}
+      {selectedTicket && (
+        <TicketDetailsModal
+          ticket={selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          onDelete={handleDeleteTicket}
+          onTicketUpdated={carregarTickets}
+        />
+      )}
 
-      <NotificationSettingsModal
-        isOpen={showNotificationSettings}
-        onClose={() => setShowNotificationSettings(false)}
-        empresa={empresa}
-        onUpdate={onEmpresaUpdate}
-      />
+      {/* Modal Preferências do Cliente */}
+      {showClientSettings && (
+        <ClientSettingsModal
+          empresa={empresa}
+          onClose={() => setShowClientSettings(false)}
+          onUpdate={onEmpresaUpdate}
+        />
+      )}
     </div>
   );
 };

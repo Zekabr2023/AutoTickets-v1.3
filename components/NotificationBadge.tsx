@@ -6,29 +6,31 @@ interface NotificationBadgeProps {
   empresaId?: string;
   isAdmin?: boolean;
   className?: string;
+  forceHidden?: boolean;
 }
 
-export const NotificationBadge: React.FC<NotificationBadgeProps> = ({ 
-  empresaId, 
-  isAdmin = false, 
-  className = '' 
+export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
+  empresaId,
+  isAdmin = false,
+  className = '',
+  forceHidden = false
 }) => {
   const [ticketsPendentes, setTicketsPendentes] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     carregarTicketsPendentes();
-    
+
     // Atualizar a cada 30 segundos
     const interval = setInterval(carregarTicketsPendentes, 30000);
-    
+
     return () => clearInterval(interval);
   }, [empresaId, isAdmin]);
 
   const carregarTicketsPendentes = async () => {
     try {
       let pendentes = 0;
-      
+
       if (isAdmin) {
         // Para admin, buscar todos os tickets pendentes
         const todosTickets = await ticketService.buscarTodosTickets();
@@ -38,7 +40,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
         const tickets = await ticketService.buscarTicketsPorStatus(empresaId, TicketStatus.Pending);
         pendentes = tickets.length;
       }
-      
+
       setTicketsPendentes(pendentes);
       setIsVisible(pendentes > 0);
     } catch (error) {
@@ -46,7 +48,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
     }
   };
 
-  if (!isVisible || ticketsPendentes === 0) {
+  if (!isVisible || ticketsPendentes === 0 || forceHidden) {
     return null;
   }
 

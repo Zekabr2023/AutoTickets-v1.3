@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Empresa } from '../lib/authService';
+import { Empresa, authService } from '../lib/authService';
 import { supabase } from '../lib/supabase';
 import { TicketStatus, Ticket } from '../types';
 import { PeriodFilter } from './PeriodFilter';
 import { AdminCharts } from './AdminCharts';
 import { AdminTicketsList } from './AdminTicketsList';
+import { AdminKanbanBoard } from './AdminKanbanBoard';
 import { AdminTicketModal } from './AdminTicketModal';
-import { IframeConfigModal } from './IframeConfigModal';
 import { NotificationBadge } from './NotificationBadge';
-import { BuildingIcon, RobotIcon, LogoutIcon } from './icons';
+import { NotificationBell } from './AdminNotifications';
+import { SettingsModal } from './SettingsModal';
+import { ColumnRuleModal } from './ColumnRuleModal';
+import { BuildingIcon, RobotIcon, LogoutIcon, SearchIcon } from './icons';
+import { useToast } from './ToastProvider';
 
 interface AdminDashboardProps {
   empresa: Empresa;
   onLogout: () => void;
+  initialTicketId?: string | null;
 }
 
 interface EstatisticasGerais {
@@ -36,7 +41,7 @@ interface EmpresaComTickets {
   ultimo_login: string | null;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogout }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogout, initialTicketId }) => {
   const [estatisticas, setEstatisticas] = useState<EstatisticasGerais>({
     totalEmpresas: 0,
     totalTickets: 0,
@@ -46,35 +51,81 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
     ticketsHoje: 0,
   });
   const [empresas, setEmpresas] = useState<EmpresaComTickets[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [periodName, setPeriodName] = useState<string>('Todos');
   const [showNovaEmpresa, setShowNovaEmpresa] = useState(false);
   const [showNovaIA, setShowNovaIA] = useState(false);
-  const [showIframeConfig, setShowIframeConfig] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tickets'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tickets' | 'kanban'>('overview');
+  const [showNovoSupervisor, setShowNovoSupervisor] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Carregar estatísticas gerais
+  // Rules Config State
+  const [systemConfig, setSystemConfig] = useState<any>({ templates: [] });
+  const [columnRuleStatus, setColumnRuleStatus] = useState<TicketStatus | null>(null);
+  const toast = useToast();
+
+  // Deep Link Handler
   useEffect(() => {
-    carregarDados();
-  }, [startDate, endDate]);
+    if (initialTicketId && tickets.length > 0 && !selectedTicket) {
+      const linkedTicket = tickets.find(t => t.id === initialTicketId);
+      if (linkedTicket) {
+        console.log("🔗 Opening Deep Linked Ticket (Admin):", linkedTicket.numero);
+        setSelectedTicket(linkedTicket);
+      }
+    }
+  }, [initialTicketId, tickets]);
 
-  const carregarDados = async () => {
+  // Search states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  // Fetch system config on mount
+  useEffect(() => {
+    fetchSystemConfig();
+  }, []);
+
+  const fetchSystemConfig = async () => {
     try {
-      setIsLoading(true);
+      const res = await fetch('http://localhost:3001/api/config');
+      const data = await res.json();
+      setSystemConfig(data);
+    } catch (error) {
+      console.error("Error fetching config:", error);
+    }
+  };
 
-      // Buscar todas as empresas
+
+
+
+  const carregarDados = async (silent = false) => {
+    try {
+      console.log('🔄 Iniciando carregamento de dados do admin...');
+
+      // ... existing fetch logic for companies ...
       const { data: empresasData, error: empresasError } = await supabase
         .from('empresas')
-        .select('*');
+        .select('id, nome_empresa, ultimo_login, email_notificacao, whatsapp_notificacao, notificacoes_ativas, is_admin, criado_em, atualizado_em');
 
-      if (empresasError) throw empresasError;
+      if (empresasError) {
+        console.error('❌ Erro ao buscar empresas:', empresasError);
+        throw empresasError;
+      }
+
+      console.log(`✅ ${empresasData?.length || 0} empresas carregadas.`);
 
       // Buscar tickets com filtro de data se aplicável
-      let ticketsQuery = supabase.from('tickets').select('*');
-      
+      let ticketsQuery = supabase
+        .from('tickets')
+        .select(`
+          *,
+          empresas(nome_empresa)
+        `) // Usando nome da tabela de relação
+        .order('criado_em', { ascending: false });
+
       if (startDate && endDate) {
         ticketsQuery = ticketsQuery
           .gte('created_at', startDate.toISOString())
@@ -83,20 +134,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
 
       const { data: ticketsData, error: ticketsError } = await ticketsQuery;
 
-      if (ticketsError) throw ticketsError;
+      if (ticketsError) {
+        console.error('❌ Erro ao buscar tickets:', ticketsError);
+        throw ticketsError;
+      }
 
-      // Calcular estatísticas
-      const totalTickets = ticketsData?.length || 0;
-      const ticketsPendentes = ticketsData?.filter(t => t.status === 'Pending').length || 0;
-      const ticketsEmAnalise = ticketsData?.filter(t => t.status === 'InAnalysis').length || 0;
-      const ticketsResolvidos = ticketsData?.filter(t => t.status === 'Resolved').length || 0;
-      
+      console.log(`✅ ${ticketsData?.length || 0} tickets carregados.`);
+
+      // Process tickets to include company name flatly if needed, or just use the joined data
+      // Process tickets to include company name flatly if needed, or just use the joined data
+      const processedTickets: Ticket[] = ticketsData?.map((t: any) => ({
+        id: t.id,
+        numero: t.numero,
+        title: t.titulo, // Correct: DB is 'titulo'
+        description: t.descricao, // Correct: DB is 'descricao'
+        whatShouldHappen: t.o_que_deveria_acontecer, // Correct: DB is 'o_que_deveria_acontecer'
+        aiId: t.ai_id,
+        aiName: t.ai_name,
+        status: t.status as TicketStatus,
+        createdAt: t.criado_em, // Correct: DB is 'criado_em'
+
+        attachments: t.imagens || [], // Correct: DB is 'imagens'
+        urgency: t.urgencia, // Correct: DB is 'urgencia'
+
+        solucao: t.solucao,
+        resolvidoPor: t.resolvido_por,
+        resolvidoEm: t.resolvido_em,
+        solicitacaoInfo: t.solicitacao_info,
+        respostaCliente: t.resposta_cliente, // Added missing field
+
+        chatHistory: t.chat_history || [],
+
+        attachmentsSolution: t.imagens_solucao || [], // Correct: DB is 'imagens_solucao'
+
+        empresaNome: t.empresas?.nome_empresa // Helper for display
+      })) || [];
+
+      setTickets(processedTickets); // Save to state
+
+      // ... existing stats calculation ...
+      const totalTickets = processedTickets.length;
+      const ticketsPendentes = processedTickets.filter(t => t.status === 'Pending').length;
+      const ticketsEmAnalise = processedTickets.filter(t => t.status === 'InAnalysis').length;
+      const ticketsResolvidos = processedTickets.filter(t => t.status === 'Resolved').length;
+
+      // ... 
+
+
       // Tickets de hoje
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
       const amanha = new Date(hoje);
       amanha.setDate(amanha.getDate() + 1);
-      
+
       const ticketsHoje = ticketsData?.filter(t => {
         const ticketDate = new Date(t.created_at);
         return ticketDate >= hoje && ticketDate < amanha;
@@ -114,7 +204,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
       // Calcular estatísticas por empresa
       const empresasComTickets = empresasData?.map(empresa => {
         const ticketsEmpresa = ticketsData?.filter(t => t.empresa_id === empresa.id) || [];
-        
+
         return {
           id: empresa.id,
           nome_empresa: empresa.nome_empresa,
@@ -132,10 +222,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
 
     } catch (error) {
       console.error('Erro ao carregar dados do admin:', error);
+      if (!silent) toast.error('Erro ao carregar dados. Verifique o console.');
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    carregarDados();
+
+    // Subscribe to realtime changes
+    const subscription = supabase
+      .channel('admin_dashboard_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+        carregarDados(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'empresas' }, () => {
+        carregarDados(true);
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleNovaEmpresa = async (dadosEmpresa: {
     nome_empresa: string;
@@ -155,7 +265,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
           notificacoes_ativas: false,
           is_admin: false,
         }])
-        .select()
+        .select('id, nome_empresa, ultimo_login, email_notificacao, whatsapp_notificacao, notificacoes_ativas, is_admin, criado_em, atualizado_em')
         .single();
 
       if (empresaError) throw empresaError;
@@ -174,12 +284,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
         if (iasError) throw iasError;
       }
 
-      alert('Empresa e IAs cadastrados com sucesso!');
+      toast.success('Empresa e IAs cadastrados com sucesso!');
       setShowNovaEmpresa(false);
       carregarDados();
     } catch (error) {
       console.error('Erro ao cadastrar empresa:', error);
-      alert('Erro ao cadastrar empresa. Veja o console para detalhes.');
+      toast.error('Erro ao cadastrar empresa. Veja o console para detalhes.');
     }
   };
 
@@ -194,12 +304,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
 
       if (error) throw error;
 
-      alert('IA cadastrada com sucesso!');
+      toast.success('IA cadastrada com sucesso!');
       setShowNovaIA(false);
       carregarDados();
     } catch (error) {
-      console.error('Erro ao cadastrar IA:', error);
-      alert('Erro ao cadastrar IA. Veja o console para detalhes.');
+      console.error('Erro ao criar IA:', error);
+      toast.error('Erro ao criar IA: ' + error.message);
+    }
+  };
+
+  const handleNovoSupervisor = async (dados: { nome: string; senha: string }) => {
+    try {
+      const { success, error } = await authService.criarEmpresa(dados.nome, dados.senha, true);
+
+      if (success) {
+        toast.success('Supervisor criado com sucesso!');
+        setShowNovoSupervisor(false);
+        carregarDados(true);
+      } else {
+        toast.error('Erro ao criar supervisor: ' + error);
+      }
+    } catch (error: any) {
+      console.error('Erro ao criar supervisor:', error);
+      toast.error('Erro ao criar supervisor: ' + error.message);
     }
   };
 
@@ -211,6 +338,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
     );
   }
 
+  // Filter tickets for display
+  const filteredTickets = tickets.filter(ticket => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    const matchesNumber = String(ticket.numero).includes(searchTerm);
+    const matchesTitle = ticket.title.toLowerCase().includes(searchLower);
+    const matchesCompany = ticket.empresaNome?.toLowerCase().includes(searchLower);
+    return matchesNumber || matchesTitle || matchesCompany;
+  });
+
   return (
     <div className="min-h-screen w-full p-4 sm:p-6 md:p-8">
       <header className="max-w-7xl mx-auto mb-8 flex justify-between items-center flex-wrap gap-4">
@@ -218,9 +355,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
           <h1 className="text-4xl font-bold text-white mb-2">🔧 Painel Administrativo</h1>
           <p className="text-gray-300">Gerencie empresas, IAs e monitore o sistema</p>
         </div>
-        
+
         {/* Botões de Ação */}
         <div className="flex items-center gap-3">
+          {/* Busca Colapsada */}
+          <div className={`flex items-center gap-2 transition-all duration-300 ${showSearch ? 'w-64' : 'w-auto'}`}>
+            {showSearch && (
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar ticket..."
+                className="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 animate-fade-in"
+                autoFocus
+              />
+            )}
+            <button
+              onClick={() => {
+                setShowSearch(!showSearch);
+                if (showSearch) setSearchTerm('');
+              }}
+              className="group relative font-semibold py-2 px-3 rounded-lg border bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden"
+              title="Buscar Ticket"
+            >
+              <SearchIcon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+              <span className="max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
+                {showSearch ? 'Fechar' : 'Buscar'}
+              </span>
+            </button>
+          </div>
+
           <button
             onClick={() => setShowNovaEmpresa(true)}
             className="group relative font-semibold py-2 px-3 rounded-lg border bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden"
@@ -231,7 +395,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
               Nova Empresa
             </span>
           </button>
-          
+
           <button
             onClick={() => setShowNovaIA(true)}
             className="group relative font-semibold py-2 px-3 rounded-lg border bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden"
@@ -243,17 +407,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
             </span>
           </button>
 
-          <button
-            onClick={() => setShowIframeConfig(true)}
-            className="group relative font-semibold py-2 px-3 rounded-lg border bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden"
-            title="Configurar Iframe"
-          >
-            <span className="text-lg">🌐</span>
-            <span className="max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
-              Iframe
-            </span>
-          </button>
-          
+          {empresa.nome_empresa === 'AUTOMABO' && (
+            <>
+              <button
+                onClick={() => setShowNovoSupervisor(true)}
+                className="group relative font-semibold py-2 px-3 rounded-lg border bg-gray-700/50 text-gray-300 border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden"
+                title="Novo Supervisor"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span className="max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
+                  Novo Supervisor
+                </span>
+              </button>
+
+              <button
+                onClick={() => setShowSettings(true)}
+                className="group relative font-semibold py-2 px-3 rounded-lg border bg-indigo-600/30 text-indigo-300 border-indigo-500/50 hover:bg-indigo-600/50 hover:border-indigo-500 transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden"
+                title="Configurações (Sistema)"
+              >
+                <span className="text-xl">⚙️</span>
+                <span className="max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
+                  Configurações
+                </span>
+              </button>
+            </>
+          )}
+
+          <NotificationBell
+            className="mx-2"
+            onNotificationClick={(ticketId) => {
+              const ticket = tickets.find(t => t.id === ticketId);
+              if (ticket) {
+                setSelectedTicket(ticket);
+              } else {
+                carregarDados(true);
+                console.log('Ticket notification clicked:', ticketId);
+              }
+            }}
+          />
+
           <button
             onClick={onLogout}
             className="group relative font-semibold py-2 px-3 rounded-lg border bg-red-600/20 text-red-300 border-red-600/50 hover:bg-red-600/30 hover:border-red-600 transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden"
@@ -268,29 +462,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
       </header>
 
       <main className="max-w-7xl mx-auto">
+        {/* ... Tab Navigation ... */}
+
         {/* Abas de Navegação */}
         <div className="mb-6">
           <div className="flex space-x-1 bg-gray-800/50 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 ${
-                activeTab === 'overview'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-              }`}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 ${activeTab === 'overview'
+                ? 'bg-indigo-600 text-white'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                } `}
             >
               📊 Visão Geral
             </button>
             <button
               onClick={() => setActiveTab('tickets')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 relative ${
-                activeTab === 'tickets'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-              }`}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 relative ${activeTab === 'tickets'
+                ? 'bg-indigo-600 text-white'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                } `}
             >
               🎫 Tickets
               <NotificationBadge isAdmin={true} className="absolute top-0 right-2" />
+            </button>
+            <button
+              onClick={() => setActiveTab('kanban')}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 relative ${activeTab === 'kanban'
+                ? 'bg-indigo-600 text-white'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                } `}
+            >
+              📋 Kanban
             </button>
           </div>
         </div>
@@ -319,7 +522,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
             )}
 
             {/* Gráficos */}
-            <AdminCharts 
+            <AdminCharts
               stats={{
                 totalEmpresas: estatisticas.totalEmpresas,
                 totalTickets: estatisticas.totalTickets,
@@ -425,7 +628,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
                         <td className="py-3 px-4 text-blue-400">{empresa.tickets_em_analise}</td>
                         <td className="py-3 px-4 text-green-400">{empresa.tickets_resolvidos}</td>
                         <td className="py-3 px-4 text-gray-400 text-sm">
-                          {empresa.ultimo_login 
+                          {empresa.ultimo_login
                             ? new Date(empresa.ultimo_login).toLocaleDateString('pt-BR')
                             : 'Nunca'
                           }
@@ -456,8 +659,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
           </>
         )}
 
+        {/* Tickets Tab - Only List */}
         {activeTab === 'tickets' && (
-          <AdminTicketsList onTicketSelect={setSelectedTicket} />
+          <AdminTicketsList
+            onTicketSelect={setSelectedTicket}
+            tickets={filteredTickets}
+            isLoading={isLoading}
+          />
+        )}
+
+        {/* Kanban Tab */}
+        {activeTab === 'kanban' && (
+          <AdminKanbanBoard
+            tickets={filteredTickets}
+            isLoading={isLoading}
+            onTicketSelect={setSelectedTicket}
+            onTicketUpdated={() => carregarDados(true)}
+            rules={systemConfig.templates}
+            onEditRules={(status) => setColumnRuleStatus(status)}
+          />
         )}
       </main>
 
@@ -478,19 +698,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
         />
       )}
 
-      {/* Modal Configuração Iframe */}
-      {showIframeConfig && (
-        <IframeConfigModal
-          onClose={() => setShowIframeConfig(false)}
+      {/* Modal Settings */}
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
         />
       )}
+
+      {/* Modal Regras da Coluna (Kanban) */}
+      {columnRuleStatus && (
+        <ColumnRuleModal
+          status={columnRuleStatus}
+          onClose={() => setColumnRuleStatus(null)}
+          onSaveSuccess={() => {
+            fetchSystemConfig();
+          }}
+        />
+      )}
+
+      {/* Modal Novo Supervisor */}
 
       {/* Modal Visualizar Ticket */}
       {selectedTicket && (
         <AdminTicketModal
           ticket={selectedTicket}
           onClose={() => setSelectedTicket(null)}
-          onTicketUpdated={carregarDados}
+          onTicketUpdated={() => carregarDados(true)}
+          adminName={empresa.nome_empresa}
+        />
+      )}
+
+      {/* Modal Novo Supervisor */}
+      {showNovoSupervisor && (
+        <NovaSupervisorModal
+          onClose={() => setShowNovoSupervisor(false)}
+          onSave={handleNovoSupervisor}
         />
       )}
     </div>
@@ -517,7 +759,7 @@ const NovaEmpresaModal: React.FC<{
     if (!nomeEmpresa.trim()) return;
 
     const iasValidas = ias.filter(ia => ia.trim());
-    
+
     onSave({
       nome_empresa: nomeEmpresa.trim(),
       email_notificacao: emailNotificacao.trim() || undefined,
@@ -544,7 +786,7 @@ const NovaEmpresaModal: React.FC<{
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md border border-gray-600">
         <h3 className="text-xl font-bold text-white mb-4">🏢 Nova Empresa</h3>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-gray-300 mb-2">Nome da Empresa</label>
@@ -586,7 +828,7 @@ const NovaEmpresaModal: React.FC<{
                   type="text"
                   value={ia}
                   onChange={(e) => atualizarIA(index, e.target.value)}
-                  placeholder={`Nome da IA ${index + 1}`}
+                  placeholder={`Nome da IA ${index + 1} `}
                   className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-indigo-500"
                 />
                 {ias.length > 1 && (
@@ -653,7 +895,7 @@ const NovaIAModal: React.FC<{
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md border border-gray-600">
         <h3 className="text-xl font-bold text-white mb-4">🤖 Nova IA</h3>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-gray-300 mb-2">Nome da IA</label>
@@ -694,6 +936,66 @@ const NovaIAModal: React.FC<{
             <button
               type="submit"
               className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors duration-200"
+            >
+              Salvar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Modal Novo Supervisor
+const NovaSupervisorModal: React.FC<{
+  onClose: () => void;
+  onSave: (dados: { nome: string; senha: string }) => void;
+}> = ({ onClose, onSave }) => {
+  const [nome, setNome] = useState('');
+  const [senha, setSenha] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim() || !senha.trim()) return;
+    onSave({ nome: nome.trim(), senha: senha.trim() });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md border border-gray-600">
+        <h3 className="text-xl font-bold text-white mb-4">👤 Novo Supervisor</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">Nome</label>
+            <input
+              type="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">Senha</label>
+            <input
+              type="password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              required
+            />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors duration-200"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors duration-200"
             >
               Salvar
             </button>
