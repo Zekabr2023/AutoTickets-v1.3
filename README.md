@@ -927,3 +927,4 @@ WHERE e.notificacoes_ativas = true
 **Status:** ✅ Pronto para Produção
 
 **powered by [Automabo](https://automabo.com.br)** 🚀
+# AutoTickets-v1.3
