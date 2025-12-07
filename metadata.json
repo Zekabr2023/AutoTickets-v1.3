@@ -1,0 +1,5 @@
+{
+  "name": "Support Center Pro",
+  "description": "A web application to centralize and manage company support tickets, preparing for future integration with a Supabase backend.",
+  "requestFramePermissions": []
+}

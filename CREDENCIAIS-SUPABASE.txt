@@ -1,0 +1,71 @@
+🎉 CREDENCIAIS DO SEU PROJETO SUPABASE
+==========================================
+
+✅ BANCO DE DADOS CONFIGURADO COM SUCESSO!
+
+📊 Tabelas Criadas:
+- ✅ empresas (3 empresas inseridas)
+- ✅ tickets (pronta para receber tickets)
+
+👥 Empresas Cadastradas:
+1. Automabo (senha: Suporteautomabo)
+2. Empresa Teste (senha: Suporteautomabo)
+3. TechCorp (senha: Suporteautomabo)
+
+🔑 SUAS CREDENCIAIS:
+==========================================
+
+VITE_SUPABASE_URL=https://vpeavmturydcqqdbxaof.supabase.co
+
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZWF2bXR1cnlkY3FxZGJ4YW9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMjA4OTQsImV4cCI6MjA3NTU5Njg5NH0.YIjpYcio7dQADO3RLuDXbWzMOoCGHF98lEDAuu4q6XM
+
+VITE_N8N_WEBHOOK_URL=https://n8n-cbnet.automabo.com.br/webhook/Tickets
+
+==========================================
+
+📝 PRÓXIMOS PASSOS:
+
+1. Crie um arquivo .env na raiz do projeto com o seguinte conteúdo:
+
+# Configurações do Supabase
+VITE_SUPABASE_URL=https://vpeavmturydcqqdbxaof.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZWF2bXR1cnlkY3FxZGJ4YW9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMjA4OTQsImV4cCI6MjA3NTU5Njg5NH0.YIjpYcio7dQADO3RLuDXbWzMOoCGHF98lEDAuu4q6XM
+
+# Webhook n8n
+VITE_N8N_WEBHOOK_URL=https://n8n-cbnet.automabo.com.br/webhook/Tickets
+
+
+2. Execute:
+   npm install
+   npm run dev
+
+
+3. Acesse: http://localhost:5173
+
+
+4. Faça login com:
+   Empresa: Automabo
+   Senha: Suporteautomabo
+
+
+🎉 ESTÁ TUDO PRONTO!
+==========================================
+
+✅ Banco de dados criado
+✅ Tabelas configuradas
+✅ RLS habilitado
+✅ Índices otimizados
+✅ Triggers configurados
+✅ Empresas inseridas
+✅ Pronto para usar!
+
+🚀 PRÓXIMO PASSO: RODAR O PROJETO!
+==========================================
+
+
+
+
+
+
+
+
