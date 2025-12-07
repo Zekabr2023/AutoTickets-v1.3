@@ -26,21 +26,6 @@ cat << "EOF"
 EOF
 
 echo -e "${NC}"
-echo -e "${BLUE}"
-cat << "EOF"
-         /$$$ /$$                        /$$$$$$              /$$                                       /$$                /$$$  
-        /$$_/| $$                       /$$__  $$            | $$                                      | $$               |_  $$ 
-       /$$/  | $$$$$$$  /$$   /$$      | $$  \ $$ /$$   /$$ /$$$$$$    /$$$$$$  /$$$$$$/$$$$   /$$$$$$ | $$$$$$$   /$$$$$$  \  $$
-      | $$   | $$__  $$| $$  | $$      | $$$$$$$$| $$  | $$|_  $$_/   /$$__  $$| $$_  $$_  $$ |____  $$| $$__  $$ /$$__  $$  | $$
-      | $$   | $$  \ $$| $$  | $$      | $$__  $$| $$  | $$  | $$    | $$  \ $$| $$ \ $$ \ $$  /$$$$$$$| $$  \ $$| $$  \ $$  | $$
-      |  $$  | $$  | $$| $$  | $$      | $$  | $$| $$  | $$  | $$ /$$| $$  | $$| $$ | $$ | $$ /$$__  $$| $$  | $$| $$  | $$  /$$/
-       \  $$$| $$$$$$$/|  $$$$$$$      | $$  | $$|  $$$$$$/  |  $$$$/|  $$$$$$/| $$ | $$ | $$|  $$$$$$$| $$$$$$$/|  $$$$$$//$$$/ 
-        \___/|_______/  \____  $$      |__/  |__/ \______/    \___/   \______/ |__/ |__/ |__/ \_______/|_______/  \______/|___/  
-                        /$$  | $$                                                                                                
-                       |  $$$$$$/                                                                                                
-                        \______/                                                                                                 
-EOF
-echo -e "${NC}"
 
 echo -e "${BLUE}================================================${NC}"
 echo -e "${BLUE}       AutoTickets - Assistente de Instalação   ${NC}"
@@ -102,10 +87,10 @@ read -p "URL do Supabase: " SUPABASE_URL
 read -p "Chave Anon do Supabase: " SUPABASE_KEY
 read -p "Chave Service Role do Supabase (opcional, para backend): " SUPABASE_SERVICE_KEY
 
-echo -e "\n--- Configurações do WhatsApp (Meta) ---"
-read -p "Phone Number ID: " PHONE_NUMBER_ID
-read -p "Access Token: " ACCESS_TOKEN
-read -p "Verify Token (Webhook): " VERIFY_TOKEN
+# WhatsApp configurado via painel admin - pulando
+PHONE_NUMBER_ID=""
+ACCESS_TOKEN=""
+VERIFY_TOKEN=""
 
 # 4. Gerar .env
 echo -e "\n${YELLOW}[3/4] Gerando arquivos de configuração...${NC}"
@@ -145,7 +130,7 @@ if [ "$DEPLOY_MODE" == "1" ]; then
 services:
   # Proxy Reverso (Traefik)
   traefik:
-    image: traefik:v2.10
+    image: traefik:v3.0
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
