@@ -5,23 +5,42 @@ Você acabou de acessar sua tela preta (terminal do servidor)?
 
 ---
 
-### Passo 1: Copie e Cole o comando abaixo
+---
+
+### Passo 0: Preparação (Opcional - Recomendado para Múltiplos Apps)
+Se você vai rodar **VÁRIOS sites** neste servidor (não apenas o AutoTickets), recomendamos preparar o terreno instalando o Docker e o **Portainer** primeiro.
+Isso cria um painel visual para você gerenciar tudo.
+
+```bash
+# Baixar o projeto (se ainda não baixou)
+git clone https://github.com/Zekabr2023/AutoTickets-v1.3.git AutoTickets-v2.0
+cd AutoTickets-v2.0
+
+# Instalar Base (Docker + Portainer)
+chmod +x script_instalation/setup_server_base.sh
+sed -i 's/\r$//' script_instalation/setup_server_base.sh
+sudo ./script_instalation/setup_server_base.sh
+```
+*Acesse o Portainer em `https://SEU-IP:9443` para conferir se está tudo OK.*
+
+---
+
+### Passo 1: Instalação do AutoTickets
 Selecione todo o bloco de código abaixo, copie e cole no seu terminal.
 Ele vai baixar o projeto e preparar tudo.
 
 ```bash
-# 1. Instalar git se não tiver
+```bash
+# 1. Instalar git (se ainda não fez)
 sudo apt update && sudo apt install git -y
 
-# 2. Baixar o projeto
+# 2. Baixar o projeto (se pulou o Passo 0)
 git clone https://github.com/Zekabr2023/AutoTickets-v1.3.git AutoTickets-v2.0
 cd AutoTickets-v2.0
 
-# 3. Preparar o instalador
+# 3. Iniciar Instalação
 chmod +x script_instalation/setup.sh
 sed -i 's/\r$//' script_instalation/setup.sh
-
-# 4. Iniciar Instalação
 sudo ./script_instalation/setup.sh
 ```
 
