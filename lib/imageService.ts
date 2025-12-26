@@ -20,7 +20,7 @@ export const imageService = {
       const fileExtension = file.name.split('.').pop();
       const fileName = `ticket-${ticketNumero}/${timestamp}-${randomString}.${fileExtension}`;
 
-      console.log(`📤 Fazendo upload de imagem: ${fileName}`);
+
 
       // Fazer upload para o Supabase Storage
       const { data, error } = await supabase.storage
@@ -32,12 +32,12 @@ export const imageService = {
 
       if (error) {
         console.error('❌ Erro ao fazer upload da imagem:', error);
-        
+
         // Se o bucket não existe, tentar criar
         if (error.message.includes('not found') || error.message.includes('does not exist')) {
           console.log('🔧 Tentando criar bucket...');
           await this.createBucketIfNotExists();
-          
+
           // Tentar upload novamente
           const { data: retryData, error: retryError } = await supabase.storage
             .from(BUCKET_NAME)
@@ -45,21 +45,20 @@ export const imageService = {
               cacheControl: '3600',
               upsert: false
             });
-          
+
           if (retryError) {
             console.error('❌ Erro ao fazer upload após criar bucket:', retryError);
             return null;
           }
-          
+
           // Obter URL pública
           const { data: urlData } = supabase.storage
             .from(BUCKET_NAME)
             .getPublicUrl(retryData.path);
-          
-          console.log('✅ Imagem enviada com sucesso (após criar bucket)!');
+
           return urlData.publicUrl;
         }
-        
+
         return null;
       }
 
@@ -68,7 +67,7 @@ export const imageService = {
         .from(BUCKET_NAME)
         .getPublicUrl(data.path);
 
-      console.log('✅ Imagem enviada com sucesso!');
+
       return urlData.publicUrl;
     } catch (error) {
       console.error('❌ Exceção ao fazer upload:', error);
@@ -104,14 +103,14 @@ export const imageService = {
   async createBucketIfNotExists(): Promise<boolean> {
     try {
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-      
+
       if (listError) {
         console.error('❌ Erro ao listar buckets:', listError);
         return false;
       }
 
       const bucketExists = buckets?.some(b => b.name === BUCKET_NAME);
-      
+
       if (bucketExists) {
         console.log('✅ Bucket já existe');
         return true;
@@ -148,7 +147,7 @@ export const imageService = {
       // Extrair o caminho do arquivo da URL
       const url = new URL(imageUrl);
       const pathParts = url.pathname.split(`/storage/v1/object/public/${BUCKET_NAME}/`);
-      
+
       if (pathParts.length < 2) {
         console.error('❌ URL inválida');
         return false;

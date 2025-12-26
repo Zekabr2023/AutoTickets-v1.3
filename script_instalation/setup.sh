@@ -85,7 +85,8 @@ fi
 echo -e "\n--- Credenciais do Supabase ---"
 read -p "URL do Supabase: " SUPABASE_URL
 read -p "Chave Anon do Supabase: " SUPABASE_KEY
-read -p "Chave Service Role do Supabase (opcional, para backend): " SUPABASE_SERVICE_KEY
+read -p "Chave Service Role do Supabase (OBRIGATÓRIO para Backend/Cron): " SUPABASE_SERVICE_KEY
+read -p "Chave Google Gemini AI (OBRIGATÓRIO para IA): " GEMINI_API_KEY
 
 # WhatsApp configurado via painel admin - pulando
 PHONE_NUMBER_ID=""
@@ -104,6 +105,7 @@ NODE_ENV=production
 SUPABASE_URL=$SUPABASE_URL
 SUPABASE_KEY=$SUPABASE_KEY
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+GEMINI_API_KEY=$GEMINI_API_KEY
 
 # Variáveis do Frontend (Vite precisa destas no momento do build)
 VITE_SUPABASE_URL=$SUPABASE_URL
@@ -160,6 +162,7 @@ services:
       - SUPABASE_URL=\${SUPABASE_URL}
       - SUPABASE_KEY=\${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=\${SUPABASE_SERVICE_KEY}
+      - GEMINI_API_KEY=\${GEMINI_API_KEY}
       - PHONE_NUMBER_ID=\${PHONE_NUMBER_ID}
       - ACCESS_TOKEN=\${ACCESS_TOKEN}
       - VERIFY_TOKEN=\${VERIFY_TOKEN}
@@ -207,6 +210,7 @@ services:
       - SUPABASE_URL=\${SUPABASE_URL}
       - SUPABASE_KEY=\${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=\${SUPABASE_SERVICE_KEY}
+      - GEMINI_API_KEY=\${GEMINI_API_KEY}
       - PHONE_NUMBER_ID=\${PHONE_NUMBER_ID}
       - ACCESS_TOKEN=\${ACCESS_TOKEN}
       - VERIFY_TOKEN=\${VERIFY_TOKEN}

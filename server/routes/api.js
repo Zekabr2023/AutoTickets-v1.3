@@ -1,10 +1,10 @@
-const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/notificationController');
+const { authenticateUser } = require('../middleware/auth');
 
-// Config
-router.get('/config', controller.getConfiguration);
-router.post('/config', controller.updateConfiguration);
+// Config (Secured)
+router.get('/config', authenticateUser, controller.getConfiguration);
+router.post('/config', authenticateUser, controller.updateConfiguration);
 
 // Discord
 router.post('/notify/discord', controller.notifyDiscord);
@@ -23,5 +23,9 @@ router.post('/notify/status-change', controller.notifyStatusChange);
 
 // Tacit Acceptance (auto-resolve expired tickets)
 router.post('/tickets/process-tacit-acceptance', controller.processTacitAcceptance);
+
+// AI (Secure Proxy)
+const aiController = require('../controllers/aiController');
+router.post('/ia/chat', aiController.generateResponse);
 
 module.exports = router;

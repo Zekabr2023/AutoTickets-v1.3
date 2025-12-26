@@ -374,13 +374,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                             </div>
                                             <div className="text-gray-300 text-sm mt-2 whitespace-pre-wrap leading-relaxed">
                                                 {previewDescription.split('\n').map((line, i) => {
-                                                    // Simple markdown parsing for preview
-                                                    let content = line;
-                                                    // Bold
-                                                    content = content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-                                                    // Links
-                                                    content = content.replace(/\[(.*?)\]\((.*?)\)/g, '<a class="text-indigo-400 underline">$1</a>');
-                                                    return <div key={i} dangerouslySetInnerHTML={{ __html: content || '&nbsp;' }} />;
+                                                    // Simple markdown parsing for preview (SAFE - No dangerouslySetInnerHTML)
+                                                    return (
+                                                        <div key={i} className="min-h-[1.2em]">
+                                                            {line.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g).map((part, idx) => {
+                                                                if (part.startsWith('**') && part.endsWith('**')) {
+                                                                    return <strong key={idx}>{part.slice(2, -2)}</strong>;
+                                                                }
+                                                                if (part.startsWith('[') && part.includes('](') && part.endsWith(')')) {
+                                                                    const match = part.match(/\[(.*?)\]\((.*?)\)/);
+                                                                    if (match) {
+                                                                        return <a key={idx} className="text-indigo-400 underline">{match[1]}</a>;
+                                                                    }
+                                                                }
+                                                                return part;
+                                                            })}
+                                                        </div>
+                                                    );
                                                 })}
                                             </div>
                                             <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-400">

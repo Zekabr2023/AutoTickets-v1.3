@@ -42,22 +42,25 @@ O instalador vai te fazer algumas perguntas na tela. Aqui está o que responder:
 3.  **Digite seu Email para o SSL**:
     *   *O que digitar:* Seu email pessoal (para o certificado de segurança HTTPS).
 
-4.  **Credenciais do Supabase e WhatsApp**:
-    *   *O que digitar:* Copie e cole as chaves que você tem no seu arquivo `CREDENCIAIS-SUPABASE.txt` ou no painel do Supabase/Facebook.
-    *   *Dica:* Para colar no terminal, geralmente é clicar com botão direito do mouse.
+4.  **Credenciais do Supabase e IA**:
+    *   *Prepare-se:* Você vai precisar de 4 chaves:
+        1.  `supaURL` (URL do projeto)
+        2.  `anonKey` (Chave pública)
+        3.  `serviceRoleKey` (Chave secreta backend - **NOVA**)
+        4.  `geminiApiKey` (Chave da IA do Google - **NOVA**)
+    *   *O que digitar:* O instalador vai pedir uma por uma. Copie e cole.
 
 ---
 
 ### Passo 3: Banco de Dados
 
-Depois que o site estiver no ar, falta só uma coisinha no banco de dados.
+Depois que o site estiver no ar, precisamos configurar as tabelas e a segurança.
 1. Acesse seu painel no [Supabase.com](https://supabase.com).
-2. Vá em **SQL Editor**.
-3. Cole e execute este comando:
+2. Vá em **SQL Editor** > **+ New Query**.
+3. Copie o conteúdo de `server/rpc/setup_full_database.sql` deste projeto.
+4. Cole e clique em **Run**.
 
-```sql
-ALTER TABLE tickets ADD COLUMN IF NOT EXISTS solicitante_nome TEXT;
-```
+Isso vai criar as tabelas (`empresas`, `tickets`, `ias`) e configurar a segurança (RPCs).
 
 ---
 

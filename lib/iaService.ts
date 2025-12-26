@@ -9,6 +9,8 @@ export interface IA {
   atualizado_em: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 export const iaService = {
   /**
    * Busca IAs de uma empresa
@@ -55,6 +57,30 @@ export const iaService = {
       return { success: false, error: 'Erro ao criar IA' };
     }
   },
+
+  /**
+   * Gera uma resposta usando a IA via Backend (Seguro)
+   */
+  async gerarResposta(prompt: string, history: any[] = []): Promise<{ success: boolean; data?: string; error?: string }> {
+    try {
+      const response = await fetch(`${API_URL}/ia/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, history })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      return { success: true, data: result.data };
+    } catch (error: any) {
+      console.error('Erro ao gerar resposta IA:', error);
+      return { success: false, error: error.message || 'Erro de conexão com IA' };
+    }
+  }
 };
 
 

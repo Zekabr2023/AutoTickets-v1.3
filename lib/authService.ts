@@ -47,22 +47,32 @@ export const authService = {
    */
   async criarEmpresa(nomeEmpresa: string, senha: string = 'Suporteautomabo', isAdmin: boolean = false): Promise<{ success: boolean; empresa?: Empresa; error?: string }> {
     try {
-      // Inserção continua normal, pois INSERT na tabela ainda é permitido (se RLS deixar)
-      // Mas o retorno deve ser explícito para não tentar ler 'senha'
-      const { data: empresa, error } = await supabase
+      // Use Secure RPC instead of direct insert
+      const { data, error } = await supabase.rpc('create_empresa_secure', {
+        p_nome_empresa: nomeEmpresa,
+        p_senha: senha,
+        p_is_admin: isAdmin
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      // Fetch returned ID (RPC returns ID only, so we might need to fetch full object if needed, 
+      // but typically success is enough. However, the interface expects 'empresa' object.)
+      // Let's modify logic to return what we can, or fetch it.
+      // Since it's admin creation mostly, ID is key. 
+      // But let's fetch it to be consistent with previous return type.
+
+      const { data: empresa } = await supabase
         .from('empresas')
-        .insert([{ nome_empresa: nomeEmpresa, senha, is_admin: isAdmin }])
         .select('id, nome_empresa, ultimo_login, email_notificacao, whatsapp_notificacao, notificacoes_ativas, is_admin, criado_em, atualizado_em')
+        .eq('id', data.data)
         .single();
 
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, empresa };
-    } catch (error) {
+      return { success: true, empresa: empresa as Empresa };
+    } catch (error: any) {
       console.error('Erro ao criar empresa:', error);
-      return { success: false, error: 'Erro ao criar empresa' };
+      return { success: false, error: error.message };
     }
   },
 
