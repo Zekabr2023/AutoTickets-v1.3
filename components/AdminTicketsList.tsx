@@ -132,6 +132,7 @@ export const AdminTicketsList: React.FC<AdminTicketsListProps> = ({
             <tr className="border-b border-gray-600">
               <th className="text-left py-3 px-4 text-gray-300 font-semibold">Ticket</th>
               <th className="text-left py-3 px-4 text-gray-300 font-semibold">Empresa</th>
+              <th className="text-left py-3 px-4 text-gray-300 font-semibold">Solicitante</th>
               <th className="text-left py-3 px-4 text-gray-300 font-semibold">Título</th>
               <th className="text-left py-3 px-4 text-gray-300 font-semibold">Status</th>
               <th className="text-left py-3 px-4 text-gray-300 font-semibold">Urgência</th>
@@ -140,41 +141,58 @@ export const AdminTicketsList: React.FC<AdminTicketsListProps> = ({
             </tr>
           </thead>
           <tbody>
-            {currentItems.map((ticket) => (
-              <tr key={ticket.id} className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors duration-200">
-                <td className="py-3 px-4 text-white font-medium">
-                  #{String(ticket.numero).padStart(4, '0')}
-                </td>
-                <td className="py-3 px-4 text-gray-300">
-                  {/* Exibe o nome da empresa vindo do banco */}
-                  {ticket.empresaNome || 'Empresa desconhecida'}
-                </td>
-                <td className="py-3 px-4 text-gray-300 max-w-xs truncate" title={ticket.title}>
-                  {ticket.title}
-                </td>
-                <td className="py-3 px-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                    {getStatusText(ticket.status)}
-                  </span>
-                </td>
-                <td className="py-3 px-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getUrgenciaColor(ticket.urgency)}`}>
-                    {ticket.urgency}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-gray-400 text-sm">
-                  {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}
-                </td>
-                <td className="py-3 px-4">
-                  <button
-                    onClick={() => onTicketSelect?.(ticket)}
-                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors duration-200"
-                  >
-                    Ver
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {currentItems.map((ticket) => {
+              const isNew = (new Date().getTime() - new Date(ticket.createdAt).getTime()) < (60 * 60 * 1000); // 1 hour
+              return (
+                <tr
+                  key={ticket.id}
+                  onClick={() => onTicketSelect?.(ticket)}
+                  className={`border-b border-gray-700/50 hover:bg-gray-700/30 transition-all duration-200 cursor-pointer group ${isNew ? 'bg-indigo-500/10 hover:bg-indigo-500/20' : ''}`}
+                >
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-gray-400">#{String(ticket.numero).padStart(4, '0')}</span>
+                      {isNew && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500 text-white font-bold animate-pulse">
+                          NOVO
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-gray-300">
+                    {/* Exibe o nome da empresa vindo do banco */}
+                    {ticket.empresaNome || 'Empresa desconhecida'}
+                  </td>
+                  <td className="py-3 px-4 text-gray-300">
+                    {ticket.solicitanteNome || '-'}
+                  </td>
+                  <td className="py-3 px-4 text-gray-300 max-w-xs truncate" title={ticket.title}>
+                    {ticket.title}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
+                      {getStatusText(ticket.status)}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getUrgenciaColor(ticket.urgency)}`}>
+                      {ticket.urgency}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-gray-400 text-sm">
+                    {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}
+                  </td>
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => onTicketSelect?.(ticket)}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors duration-200"
+                    >
+                      Ver
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

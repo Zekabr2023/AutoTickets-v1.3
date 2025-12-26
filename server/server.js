@@ -22,4 +22,12 @@ app.use('/api', apiRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+
+    // Iniciar Cron JObs
+    try {
+        const { startCronJobs } = require('./cronJobs');
+        startCronJobs();
+    } catch (e) {
+        console.error("Erro ao iniciar Cron Jobs:", e);
+    }
 });

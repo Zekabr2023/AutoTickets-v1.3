@@ -3,7 +3,7 @@ import { Ticket, TicketStatus, UrgencyLevel } from '../types';
 import { enviarWebhookTicket, enviarWebhookDeletar } from './webhooks';
 import { imageService } from './imageService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Helper
 const notifyBackend = async (endpoint: string, body: any) => {

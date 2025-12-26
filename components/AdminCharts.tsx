@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -14,6 +14,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import { Ticket } from '../types';
 
 interface AdminChartsProps {
   stats: {
@@ -31,12 +32,13 @@ interface AdminChartsProps {
     tickets_em_analise: number;
     tickets_resolvidos: number;
   }>;
+  tickets?: Ticket[];
 }
 
 type ChartType = 'bar' | 'line' | 'pie';
-type ComparisonType = 'status' | 'empresas';
+type ComparisonType = 'status' | 'empresas' | 'evolution';
 
-export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => {
+export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas, tickets = [] }) => {
   const [chartType, setChartType] = useState<ChartType>('bar');
   const [comparisonType, setComparisonType] = useState<ComparisonType>('status');
 
@@ -56,60 +58,85 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
     total: empresa.tickets_pendentes + empresa.tickets_em_analise + empresa.tickets_resolvidos,
   }));
 
+  // Aggregation Logic for Evolution (Monthly)
+  const evolutionData = useMemo(() => {
+    const months: Record<string, number> = {};
+
+    tickets.forEach(ticket => {
+      if (ticket.createdAt) {
+        const date = new Date(ticket.createdAt);
+        const key = `${date.getMonth() + 1}/${date.getFullYear()}`; // e.g., 12/2025
+        months[key] = (months[key] || 0) + 1;
+      }
+    });
+
+    // Sort by date logic (simple parsing since format is M/YYYY)
+    return Object.entries(months)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => {
+        const [ma, ya] = a.name.split('/').map(Number);
+        const [mb, yb] = b.name.split('/').map(Number);
+        return (ya * 100 + ma) - (yb * 100 + mb);
+      });
+  }, [tickets]);
+
+
+
 
   const getChartData = () => {
     switch (comparisonType) {
-      case 'status':
-        return statusData;
-      case 'empresas':
-        return empresasData;
-      default:
-        return statusData;
+      case 'status': return statusData;
+      case 'empresas': return empresasData;
+      case 'evolution': return evolutionData;
+      default: return statusData;
     }
   };
 
   const renderChart = () => {
     const data = getChartData();
 
+    // Force Line chart for Evolution if not explicitly changed (optional UX)
+    // But keeping it flexible with chartType state is fine.
+
     switch (chartType) {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data}>
+            <BarChart data={data} layout={comparisonType === 'requesters' ? 'vertical' : 'horizontal'}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" />
+              {comparisonType === 'requesters' ? (
+                <>
+                  <XAxis type="number" stroke="#9ca3af" />
+                  <YAxis dataKey="name" type="category" width={100} stroke="#9ca3af" tick={{ fontSize: 12 }} />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="name" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                </>
+              )}
+
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#f9fafb'
-                }}
-                formatter={(value, name) => {
-                  if (comparisonType === 'status') {
-                    return [value, 'Quantidade'];
-                  }
-                  return [value, name];
-                }}
-                labelFormatter={(label) => {
-                  if (comparisonType === 'status') {
-                    return `Status: ${label}`;
-                  }
-                  return `Empresa: ${label}`;
-                }}
+                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f9fafb' }}
+                formatter={(value: any, name: string) => [value, name === 'value' ? 'Tickets' : name]}
               />
               {comparisonType === 'status' ? (
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                  {data.map((entry, index) => (
+                  {data.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.color || '#3b82f6'} />
                   ))}
                 </Bar>
-              ) : (
+              ) : comparisonType === 'empresas' ? (
                 <>
-                  <Bar dataKey="pendentes" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="emAnalise" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="resolvidos" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pendentes" stackId="a" fill="#f59e0b" />
+                  <Bar dataKey="emAnalise" stackId="a" fill="#3b82f6" />
+                  <Bar dataKey="resolvidos" stackId="a" fill="#10b981" />
+                </>
+              ) : (
+                // Evolution chart
+                <>
+                  <Bar dataKey="value" name="Tickets" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <Legend />
                 </>
               )}
             </BarChart>
@@ -124,32 +151,18 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
               <XAxis dataKey="name" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#f9fafb'
-                }}
-                formatter={(value, name) => {
-                  if (comparisonType === 'status') {
-                    return [value, 'Quantidade'];
-                  }
-                  return [value, name];
-                }}
-                labelFormatter={(label) => {
-                  if (comparisonType === 'status') {
-                    return `Status: ${label}`;
-                  }
-                  return `Empresa: ${label}`;
-                }}
+                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f9fafb' }}
               />
-              {comparisonType === 'status' ? (
-                <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6' }} />
+              {comparisonType === 'empresas' ? (
+                <>
+                  <Line type="monotone" dataKey="pendentes" stroke="#f59e0b" />
+                  <Line type="monotone" dataKey="emAnalise" stroke="#3b82f6" />
+                  <Line type="monotone" dataKey="resolvidos" stroke="#10b981" />
+                </>
               ) : (
                 <>
-                  <Line type="monotone" dataKey="pendentes" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b' }} />
-                  <Line type="monotone" dataKey="emAnalise" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6' }} />
-                  <Line type="monotone" dataKey="resolvidos" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} />
+                  <Line type="monotone" dataKey="value" name="Tickets" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: '#8b5cf6' }} />
+                  <Legend />
                 </>
               )}
             </LineChart>
@@ -161,27 +174,20 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={statusData}
+                data={data}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
                 outerRadius={120}
                 paddingAngle={5}
-                dataKey="value"
+                dataKey={comparisonType === 'empresas' ? 'total' : 'value'}
               >
-                {statusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                {data.map((entry: any, index: number) => (
+                  <Cell key={`cell-${index}`} fill={entry.color || `hsl(${index * 45}, 70%, 50%)`} />
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#f9fafb'
-                }}
-                formatter={(value, name) => [value, 'Quantidade']}
-                labelFormatter={(label) => `Status: ${label}`}
+                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f9fafb' }}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -223,6 +229,7 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
             >
               <option value="status">Status</option>
               <option value="empresas">Empresas</option>
+              <option value="evolution">Evolução Mensal</option>
             </select>
           </div>
         </div>
@@ -233,21 +240,23 @@ export const AdminCharts: React.FC<AdminChartsProps> = ({ stats, empresas }) => 
         {renderChart()}
       </div>
 
-      {/* Legenda de Cores */}
-      <div className="flex justify-center gap-6 mt-4">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-          <span className="text-sm text-gray-300">Pendentes</span>
+      {/* Legenda de Cores (apenas para status/empresas fixos) */}
+      {(comparisonType === 'status' || comparisonType === 'empresas') && (
+        <div className="flex justify-center gap-6 mt-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+            <span className="text-sm text-gray-300">Pendentes</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <span className="text-sm text-gray-300">Em Análise</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <span className="text-sm text-gray-300">Resolvidos</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-          <span className="text-sm text-gray-300">Em Análise</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          <span className="text-sm text-gray-300">Resolvidos</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

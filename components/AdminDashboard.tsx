@@ -90,7 +90,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
 
   const fetchSystemConfig = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/config');
+      const res = await fetch('/api/config');
       const data = await res.json();
       setSystemConfig(data);
     } catch (error) {
@@ -167,6 +167,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
 
         attachmentsSolution: t.imagens_solucao || [], // Correct: DB is 'imagens_solucao'
 
+        solicitanteNome: t.solicitante_nome, // Requester name from DB
         empresaNome: t.empresas?.nome_empresa // Helper for display
       })) || [];
 
@@ -462,145 +463,99 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
       </header>
 
       <main className="max-w-7xl mx-auto">
-        {/* ... Tab Navigation ... */}
-
-        {/* Abas de Navegação */}
-        <div className="mb-6">
-          <div className="flex space-x-1 bg-gray-800/50 p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 ${activeTab === 'overview'
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                } `}
-            >
-              📊 Visão Geral
-            </button>
-            <button
-              onClick={() => setActiveTab('tickets')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 relative ${activeTab === 'tickets'
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                } `}
-            >
-              🎫 Tickets
-              <NotificationBadge isAdmin={true} className="absolute top-0 right-2" />
-            </button>
-            <button
-              onClick={() => setActiveTab('kanban')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 relative ${activeTab === 'kanban'
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                } `}
-            >
-              📋 Kanban
-            </button>
+        {/* Abas de Navegação Redesenhadas */}
+        <div className="mb-8">
+          <div className="flex justify-center">
+            <div className="inline-flex bg-gray-800/50 p-1.5 rounded-2xl border border-gray-700/50 shadow-inner backdrop-blur-sm">
+              {[
+                { id: 'overview', label: 'Visão Geral', icon: '📊' },
+                { id: 'tickets', label: 'Tickets', icon: '🎫', badge: true },
+                { id: 'kanban', label: 'Kanban', icon: '📋' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`
+                    relative px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ease-out flex items-center gap-2
+                    ${activeTab === tab.id
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 scale-105'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                    }
+                  `}
+                >
+                  <span className="text-lg">{tab.icon}</span>
+                  {tab.label}
+                  {tab.badge && <NotificationBadge isAdmin={true} className="ml-2 bg-red-500" />}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* Filtro de Período - apenas na aba overview */}
-        {activeTab === 'overview' && (
-          <div className="mb-6 flex justify-end">
-            <PeriodFilter onPeriodChange={(start, end, name) => {
-              setStartDate(start);
-              setEndDate(end);
-              setPeriodName(name);
-            }} />
-          </div>
-        )}
 
         {/* Conteúdo das Abas */}
         {activeTab === 'overview' && (
           <>
-            {/* Indicador de Período */}
-            {periodName !== 'Todos' && (
-              <div className="mb-4 p-3 bg-indigo-500/20 border border-indigo-500/50 rounded-lg backdrop-blur-sm">
-                <p className="text-indigo-300 text-sm font-medium">
-                  📅 Filtrando por: <span className="text-indigo-200 font-semibold">{periodName}</span>
-                </p>
-              </div>
-            )}
 
-            {/* Gráficos */}
-            <AdminCharts
-              stats={{
-                totalEmpresas: estatisticas.totalEmpresas,
-                totalTickets: estatisticas.totalTickets,
-                ticketsPendentes: estatisticas.ticketsPendentes,
-                ticketsEmAnalise: estatisticas.ticketsEmAnalise,
-                ticketsResolvidos: estatisticas.ticketsResolvidos,
-                ticketsHoje: estatisticas.ticketsHoje,
-              }}
-              empresas={empresas.map(emp => ({
-                id: emp.id,
-                nome: emp.nome_empresa,
-                tickets_pendentes: emp.tickets_pendentes,
-                tickets_em_analise: emp.tickets_em_analise,
-                tickets_resolvidos: emp.tickets_resolvidos,
-              }))}
-            />
+            {/* Estatísticas Gerais (MOVED UP) - Using StatCard Component */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8 animate-fade-in-up">
+              <StatCard
+                title="Total Empresas"
+                value={estatisticas.totalEmpresas}
+                icon="🏢"
+                color="blue"
+              />
+              <StatCard
+                title="Total Tickets"
+                value={estatisticas.totalTickets}
+                icon="📋"
+                color="gray"
+              />
+              <StatCard
+                title="Pendentes"
+                value={estatisticas.ticketsPendentes}
+                icon="⏳"
+                color="yellow"
+              />
+              <StatCard
+                title="Em Análise"
+                value={estatisticas.ticketsEmAnalise}
+                icon="🔍"
+                color="indigo"
+              />
+              <StatCard
+                title="Resolvidos"
+                value={estatisticas.ticketsResolvidos}
+                icon="✅"
+                color="green"
+              />
+              <StatCard
+                title="Hoje"
+                value={estatisticas.ticketsHoje}
+                icon="📅"
+                color="purple"
+              />
+            </div>
 
-            {/* Estatísticas Gerais */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/30 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-200 text-sm font-medium">Total Empresas</p>
-                    <p className="text-3xl font-bold text-white">{estatisticas.totalEmpresas}</p>
-                  </div>
-                  <div className="text-3xl">🏢</div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-gray-500/20 to-gray-600/30 backdrop-blur-sm rounded-xl p-6 border border-gray-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-200 text-sm font-medium">Total Tickets</p>
-                    <p className="text-3xl font-bold text-white">{estatisticas.totalTickets}</p>
-                  </div>
-                  <div className="text-3xl">📋</div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/30 backdrop-blur-sm rounded-xl p-6 border border-yellow-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-yellow-200 text-sm font-medium">Pendentes</p>
-                    <p className="text-3xl font-bold text-white">{estatisticas.ticketsPendentes}</p>
-                  </div>
-                  <div className="text-3xl">⏳</div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/30 backdrop-blur-sm rounded-xl p-6 border border-indigo-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-indigo-200 text-sm font-medium">Em Análise</p>
-                    <p className="text-3xl font-bold text-white">{estatisticas.ticketsEmAnalise}</p>
-                  </div>
-                  <div className="text-3xl">🔍</div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-green-500/20 to-green-600/30 backdrop-blur-sm rounded-xl p-6 border border-green-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-200 text-sm font-medium">Resolvidos</p>
-                    <p className="text-3xl font-bold text-white">{estatisticas.ticketsResolvidos}</p>
-                  </div>
-                  <div className="text-3xl">✅</div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-200 text-sm font-medium">Hoje</p>
-                    <p className="text-3xl font-bold text-white">{estatisticas.ticketsHoje}</p>
-                  </div>
-                  <div className="text-3xl">📅</div>
-                </div>
-              </div>
+            {/* Gráficos (MOVED DOWN) */}
+            <div className="animate-fade-in-up delay-100 mb-8">
+              <AdminCharts
+                stats={{
+                  totalEmpresas: estatisticas.totalEmpresas,
+                  totalTickets: estatisticas.totalTickets,
+                  ticketsPendentes: estatisticas.ticketsPendentes,
+                  ticketsEmAnalise: estatisticas.ticketsEmAnalise,
+                  ticketsResolvidos: estatisticas.ticketsResolvidos,
+                  ticketsHoje: estatisticas.ticketsHoje,
+                }}
+                empresas={empresas.map(emp => ({
+                  id: emp.id,
+                  nome: emp.nome_empresa,
+                  tickets_pendentes: emp.tickets_pendentes,
+                  tickets_em_analise: emp.tickets_em_analise,
+                  tickets_resolvidos: emp.tickets_resolvidos,
+                }))}
+                tickets={filteredTickets}
+              />
             </div>
 
             {/* Lista de Empresas */}
@@ -660,82 +615,98 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ empresa, onLogou
         )}
 
         {/* Tickets Tab - Only List */}
-        {activeTab === 'tickets' && (
-          <AdminTicketsList
-            onTicketSelect={setSelectedTicket}
-            tickets={filteredTickets}
-            isLoading={isLoading}
-          />
-        )}
+        {
+          activeTab === 'tickets' && (
+            <AdminTicketsList
+              onTicketSelect={setSelectedTicket}
+              tickets={filteredTickets}
+              isLoading={isLoading}
+            />
+          )
+        }
 
         {/* Kanban Tab */}
-        {activeTab === 'kanban' && (
-          <AdminKanbanBoard
-            tickets={filteredTickets}
-            isLoading={isLoading}
-            onTicketSelect={setSelectedTicket}
-            onTicketUpdated={() => carregarDados(true)}
-            rules={systemConfig.templates}
-            onEditRules={(status) => setColumnRuleStatus(status)}
-          />
-        )}
-      </main>
+        {
+          activeTab === 'kanban' && (
+            <AdminKanbanBoard
+              tickets={filteredTickets}
+              isLoading={isLoading}
+              onTicketSelect={setSelectedTicket}
+              onTicketUpdated={() => carregarDados(true)}
+              rules={systemConfig.templates}
+              onEditRules={(status) => setColumnRuleStatus(status)}
+            />
+          )
+        }
+      </main >
 
       {/* Modal Nova Empresa */}
-      {showNovaEmpresa && (
-        <NovaEmpresaModal
-          onClose={() => setShowNovaEmpresa(false)}
-          onSave={handleNovaEmpresa}
-        />
-      )}
+      {
+        showNovaEmpresa && (
+          <NovaEmpresaModal
+            onClose={() => setShowNovaEmpresa(false)}
+            onSave={handleNovaEmpresa}
+          />
+        )
+      }
 
       {/* Modal Nova IA */}
-      {showNovaIA && (
-        <NovaIAModal
-          empresas={empresas}
-          onClose={() => setShowNovaIA(false)}
-          onSave={handleNovaIA}
-        />
-      )}
+      {
+        showNovaIA && (
+          <NovaIAModal
+            empresas={empresas}
+            onClose={() => setShowNovaIA(false)}
+            onSave={handleNovaIA}
+          />
+        )
+      }
 
       {/* Modal Settings */}
-      {showSettings && (
-        <SettingsModal
-          onClose={() => setShowSettings(false)}
-        />
-      )}
+      {
+        showSettings && (
+          <SettingsModal
+            onClose={() => setShowSettings(false)}
+          />
+        )
+      }
 
       {/* Modal Regras da Coluna (Kanban) */}
-      {columnRuleStatus && (
-        <ColumnRuleModal
-          status={columnRuleStatus}
-          onClose={() => setColumnRuleStatus(null)}
-          onSaveSuccess={() => {
-            fetchSystemConfig();
-          }}
-        />
-      )}
+      {
+        columnRuleStatus && (
+          <ColumnRuleModal
+            status={columnRuleStatus}
+            onClose={() => setColumnRuleStatus(null)}
+            onSaveSuccess={() => {
+              fetchSystemConfig();
+            }}
+          />
+        )
+      }
 
       {/* Modal Novo Supervisor */}
 
       {/* Modal Visualizar Ticket */}
-      {selectedTicket && (
-        <AdminTicketModal
-          ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
-          onTicketUpdated={() => carregarDados(true)}
-          adminName={empresa.nome_empresa}
-        />
-      )}
+      {
+        selectedTicket && (
+          <AdminTicketModal
+            ticket={selectedTicket}
+            onClose={() => setSelectedTicket(null)}
+            onTicketUpdated={() => carregarDados(true)}
+            adminName={empresa.nome_empresa}
+          />
+        )
+      }
 
       {/* Modal Novo Supervisor */}
-      {showNovoSupervisor && (
-        <NovaSupervisorModal
-          onClose={() => setShowNovoSupervisor(false)}
-          onSave={handleNovoSupervisor}
-        />
-      )}
-    </div>
+      {
+        showNovoSupervisor && (
+          <NovaSupervisorModal
+            onClose={() => setShowNovoSupervisor(false)}
+            onSave={handleNovoSupervisor}
+          />
+        )
+      }
+    </div >
   );
 };
 
@@ -917,10 +888,8 @@ const NovaIAModal: React.FC<{
               required
             >
               <option value="">Selecione uma empresa</option>
-              {empresas.map((empresa) => (
-                <option key={empresa.id} value={empresa.id}>
-                  {empresa.nome_empresa}
-                </option>
+              {empresas.map((emp) => (
+                <option key={emp.id} value={emp.id}>{emp.nome_empresa}</option>
               ))}
             </select>
           </div>
@@ -935,7 +904,7 @@ const NovaIAModal: React.FC<{
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors duration-200"
+              className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors duration-200"
             >
               Salvar
             </button>
@@ -945,6 +914,38 @@ const NovaIAModal: React.FC<{
     </div>
   );
 };
+
+
+
+// Helper Component for Stats
+const StatCard = ({ title, value, icon, color }: { title: string; value: number; icon: string; color: string }) => {
+  const getColorClasses = (c: string) => {
+    const map: any = {
+      blue: 'from-blue-500/20 to-blue-600/30 border-blue-500/30 text-blue-200',
+      gray: 'from-gray-500/20 to-gray-600/30 border-gray-500/30 text-gray-200',
+      yellow: 'from-yellow-500/20 to-yellow-600/30 border-yellow-500/30 text-yellow-200',
+      indigo: 'from-indigo-500/20 to-indigo-600/30 border-indigo-500/30 text-indigo-200',
+      green: 'from-green-500/20 to-green-600/30 border-green-500/30 text-green-200',
+      purple: 'from-purple-500/20 to-purple-600/30 border-purple-500/30 text-purple-200',
+    };
+    return map[c] || map['gray'];
+  };
+
+  const classes = getColorClasses(color);
+
+  return (
+    <div className={`bg-gradient-to-br ${classes} backdrop-blur-sm rounded-xl p-6 border transition-transform hover:scale-105 duration-300`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className={`text-sm font-medium opacity-80 mb-1`}>{title}</p>
+          <p className="text-3xl font-bold text-white">{value}</p>
+        </div>
+        <div className="text-3xl opacity-80">{icon}</div>
+      </div>
+    </div>
+  );
+};
+
 
 // Modal Novo Supervisor
 const NovaSupervisorModal: React.FC<{

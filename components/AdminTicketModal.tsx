@@ -251,6 +251,11 @@ export const AdminTicketModal: React.FC<AdminTicketModalProps> = ({
                 </div>
 
                 <div>
+                  <label className="text-sm text-gray-300">Solicitante:</label>
+                  <p className="text-white font-medium">{ticket.solicitanteNome || 'Não Identificado'}</p>
+                </div>
+
+                <div>
                   <label className="text-sm text-gray-300">IA:</label>
                   <p className="text-white">{ticket.aiName}</p>
                 </div>

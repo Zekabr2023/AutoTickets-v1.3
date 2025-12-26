@@ -241,11 +241,20 @@ const notifyStatusChange = async (req, res) => {
 const processTacitAcceptance = async (req, res) => {
     try {
         const { createClient } = require('@supabase/supabase-js');
-        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
         if (!supabaseUrl || !supabaseKey) {
-            return res.status(500).json({ success: false, error: 'Supabase not configured' });
+            console.error('[Tacit Debug] Missing Config:', {
+                hasUrl: !!supabaseUrl,
+                hasKey: !!supabaseKey,
+                urlSource: process.env.SUPABASE_URL ? 'SUPABASE_URL' : (process.env.VITE_SUPABASE_URL ? 'VITE_SUPABASE_URL' : 'NONE'),
+                envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+            });
+            return res.status(500).json({
+                success: false,
+                error: `Supabase not configured. URL: ${!!supabaseUrl}, Key: ${!!supabaseKey}`
+            });
         }
 
         const supabase = createClient(supabaseUrl, supabaseKey);

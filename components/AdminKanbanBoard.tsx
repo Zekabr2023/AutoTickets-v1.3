@@ -48,7 +48,7 @@ export const AdminKanbanBoard: React.FC<AdminKanbanBoardProps> = ({
     useEffect(() => {
         const checkTacitAcceptance = async () => {
             try {
-                const response = await fetch('http://localhost:3001/api/tickets/process-tacit-acceptance', {
+                const response = await fetch('/api/tickets/process-tacit-acceptance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -245,10 +245,15 @@ export const AdminKanbanBoard: React.FC<AdminKanbanBoardProps> = ({
                                         {ticket.title}
                                     </h4>
 
-                                    <div className="flex items-center gap-1 mb-2">
+                                    <div className="flex items-center gap-1 mb-2 flex-wrap">
                                         <span className="text-xs text-gray-400 truncate max-w-[150px]" title={ticket.empresaNome}>
                                             🏢 {ticket.empresaNome || 'Empresa'}
                                         </span>
+                                        {ticket.solicitanteNome && (
+                                            <span className="text-xs text-indigo-400 truncate max-w-[150px]" title={ticket.solicitanteNome}>
+                                                👤 {ticket.solicitanteNome}
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* Countdown Timer for Awaiting Info */}

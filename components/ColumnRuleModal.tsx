@@ -3,7 +3,7 @@ import { TicketStatus } from '../types';
 import { createClient } from '@supabase/supabase-js';
 import { useToast } from './ToastProvider';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
