@@ -55,8 +55,8 @@ O instalador vai te fazer algumas perguntas na tela. Aqui está o que responder:
     *   ⚠️ **Atenção:** Certifique-se de que você já criou o apontamento "Tipo A" no seu registro de domínio (Godaddy, Registro.br, Cloudflare) apontando para o IP desse servidor.
 
 2.  **Selecione o Modo de Instalação**:
-    *   *O que digitar:* Digite `1` e dê Enter (Modo Independente).
-    *   *Nota:* Só digite `2` se você for um usuário avançado com Portainer já instalado.
+    *   *Opção 1 (Independente):* Se você **PULOU** o Passo 0 e quer instalar só este site.
+    *   *Opção 2 (Integrado):* Se você **FEZ** o Passo 0 (já tem Docker/Portainer rodando). **Escolha essa opção se rodou o script de infraestrutura!**
 
 3.  **Digite seu Email para o SSL**:
     *   *O que digitar:* Seu email pessoal (para o certificado de segurança HTTPS).
