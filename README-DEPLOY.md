@@ -14,8 +14,8 @@ Ele vai baixar o projeto e preparar tudo.
 sudo apt update && sudo apt install git -y
 
 # 2. Baixar o projeto
-git clone https://github.com/Zekabr2023/AutoTickets-v1.3.git
-cd AutoTickets-v1.3
+git clone https://github.com/Zekabr2023/AutoTickets-v1.3.git AutoTickets-v2.0
+cd AutoTickets-v2.0
 
 # 3. Preparar o instalador
 chmod +x script_instalation/setup.sh
@@ -70,7 +70,7 @@ Seu sistema deve estar acessível em `https://seu-dominio.com.br`.
 Se você atualizar o código e quiser subir a atualização para o servidor:
 
 ```bash
-cd AutoTickets-v1.3
+cd AutoTickets-v2.0
 git pull
 sudo ./script_instalation/setup.sh
 ```

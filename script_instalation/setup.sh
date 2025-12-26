@@ -2,7 +2,7 @@
 # Instalador Universal para AutoTickets
 # Compatível com Ubuntu 22.04/24.04
 # Suporta ambientes Standalone e Portainer/Traefik
-# Repositório: https://github.com/Zekabr2023/AutoTickets-v1.3.git
+# Repositório: https://github.com/Zekabr2023/AutoTickets-v1.3.git (Branch Main - v2.0)
 
 # Cores
 GREEN='\033[0;32m'
@@ -28,7 +28,7 @@ EOF
 echo -e "${NC}"
 
 echo -e "${BLUE}================================================${NC}"
-echo -e "${BLUE}       AutoTickets - Assistente de Instalação   ${NC}"
+echo -e "${BLUE}       AutoTickets v2.0 - Assistente de Instalação   ${NC}"
 echo -e "${BLUE}================================================${NC}"
 
 # Garantir que estamos na raiz do projeto
